@@ -79,6 +79,21 @@ export const getPlaylist = (playlistId: string, opts = {}) => {
 };
 
 /**
+ * Gets the given playlist
+ * @param {*} playlistId
+ * @returns
+ */
+export const overwritePlaylist = (playlistId: string, uris: string[]) => {
+  return spotify.put(
+    `playlists/${playlistId}/tracks`,
+    { uris },
+    {
+      headers: { Authorization: `Bearer ${access_token}` },
+    }
+  );
+};
+
+/**
  * Get information about the user’s current playback state, including track or episode, progress, and active device.
  */
 export const getTrackAudioFeatures = (trackIds: string | string[]) => {
