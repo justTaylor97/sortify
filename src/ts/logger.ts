@@ -6,7 +6,8 @@ const logger = winston.createLogger({
     winston.format.errors({ stack: true }),
     winston.format.metadata(),
     winston.format.colorize({ all: true }),
-    winston.format.printf((info) => {
+    winston.format.printf((info: any) => {
+      // TODO: find the class/type declaration for this
       if (info.metadata.stack != undefined) {
         return info.metadata.stack;
       } else {
@@ -52,4 +53,4 @@ switch (process.env.LEVEL) {
     break;
 }
 
-module.exports = logger;
+export default logger;
