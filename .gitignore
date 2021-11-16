@@ -4,3 +4,4 @@ token.json
 playlists.json
 tags.json
 error.log
+.npmrc
