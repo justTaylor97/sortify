@@ -20,7 +20,7 @@ const start = () => {
       path: "/callback",
       handler: async ({ query: { code } }) => {
         resolve(code);
-        return "Success";
+        return "Success. You may close this tab.";
       },
     });
 
@@ -52,6 +52,7 @@ const setToken = () => {
           code: code,
           redirect_uri: "http://localhost:8888/callback",
         }),
+        // TODO: generalize redirect_uri
         {
           headers: {
             "content-type": "application/x-www-form-urlencoded",
