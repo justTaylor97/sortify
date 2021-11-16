@@ -18,7 +18,7 @@ const logger = winston.createLogger({
     //
     // - Write all logs with level `error` and above to `error.log`
     new winston.transports.File({
-      filename: `__dirname/error.log`,
+      filename: `${__dirname}/error.log`,
       level: "error",
       format: winston.format.combine(
         winston.format.timestamp(),
