@@ -2,23 +2,27 @@ const Hapi = require("@hapi/hapi");
 const axios = require("axios");
 const { client_id, client_secret, scopes } = require("./client.json");
 
+type AccessToken = {
+  access_token: string;
+};
+
 // sets base64Client
-const base64Client = new Buffer.from(`${client_id}:${client_secret}`).toString(
+const base64Client = Buffer.from(`${client_id}:${client_secret}`).toString(
   "base64"
 );
 
-// TODO: convert to TypeScript
+// TODO: convert console logs to logger?
 const server = Hapi.server({
   port: 8888,
   host: "localhost",
 });
 
 const start = () => {
-  return new Promise(async (resolve) => {
+  return new Promise<string>(async (resolve) => {
     server.route({
       method: "GET",
       path: "/callback",
-      handler: async ({ query: { code } }) => {
+      handler: async ({ query: { code } }: { query: { code: string } }) => {
         resolve(code);
         return "Success. You may close this tab.";
       },
@@ -27,7 +31,7 @@ const start = () => {
     await server.start();
     console.log("Server running on %s\n", server.info.uri);
 
-    url = "https://accounts.spotify.com/authorize?response_type=code";
+    let url = "https://accounts.spotify.com/authorize?response_type=code";
     url += `&client_id=${client_id}`;
     url += `&scope=${encodeURIComponent(scopes.join(" "))}`;
     url += `&redirect_uri=${encodeURIComponent(
@@ -44,12 +48,12 @@ process.on("unhandledRejection", (err) => {
 
 const setToken = () => {
   return start()
-    .then((code) => {
+    .then((code: string) => {
       return axios.post(
         "https://accounts.spotify.com/api/token",
         new URLSearchParams({
           grant_type: "authorization_code",
-          code: code,
+          code,
           redirect_uri: "http://localhost:8888/callback",
         }),
         // TODO: generalize redirect_uri
@@ -68,7 +72,7 @@ const setToken = () => {
     });
 };
 
-const refreshToken = (refresh_token) => {
+const refreshToken = (refresh_token: string) => {
   return axios
     .post(
       "https://accounts.spotify.com/api/token",
@@ -84,10 +88,11 @@ const refreshToken = (refresh_token) => {
         params: {},
       }
     )
-    .then(({ data }) => {
+    .then(({ data }: { data: AccessToken }) => {
+      console.log(data);
       return data;
     })
-    .catch((err) => {
+    .catch((err: Error) => {
       console.log(err);
     });
 };
