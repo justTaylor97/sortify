@@ -2,16 +2,23 @@
 const fs = require("fs");
 const axios = require("axios");
 const { program } = require("commander");
+const { DateTime } = require("luxon");
 const auth = require("./auth");
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
 let { access_token, refresh_token } = require("./token.json");
 
-program.option(
-  "-r, --refresh-playlists",
-  "downloads all playlist tag info to playlists.json."
-);
-
+program
+  .option(
+    "-r, --refresh-playlists",
+    "downloads all playlist tag info to playlists.json."
+  )
+  .option("-v, --verbose", "Displays more information.") // TODO: implement these
+  .option("--no-sort", "doesn't sort the currently playing song.");
+// TODO: add option to add tag to bucket
+// TODO: misc tags
+// TODO: explicit
+// TODO: release date
 program.parse(process.argv);
 const options = program.opts();
 
@@ -42,6 +49,10 @@ const start = async () => {
       console.log("Access token expired, trying to refresh.");
       let data = await auth.refreshToken(refresh_token);
       access_token = data.access_token;
+      data = {
+        refresh_token,
+        ...data,
+      };
       fs.writeFile(
         `${__dirname}/token.json`,
         JSON.stringify(data, null, 2),
@@ -83,22 +94,15 @@ const start = async () => {
 
   // TODO: move to a function
   // build a string with the artists
-  let artistString = current.item.artists.reduce(
-    (accumulator, artist, index, artists) => {
-      if (index === 0) {
-        return artist.name;
-      } else if (index === artists.length - 1) {
-        return `${accumulator}, and ${artist.name}`;
-      } else {
-        return `${accumulator}, ${artist.name}`;
-      }
-    },
-    ""
-  );
+  let artistString = artistsToString(current.item.artists);
 
   console.log(
     `Currently listening to '${current.item.name}' by ${artistString}.`
   );
+
+  console.log("Release Date:", current.item.album.release_date);
+  console.log("Explicit:", current.item.explicit);
+  console.log("Popularity:", current.item.popularity);
 
   // fetch all playlists for caching and tagging
   if (options.refreshPlaylists) {
@@ -117,6 +121,11 @@ const start = async () => {
     );
   }
 
+  if (options.sort) {
+    let tags = sort(current.item);
+    console.log(tags);
+  }
+
   // let playlistID = "0qLcANYAyF4sMipVPx5pCc";
 
   // addToPlaylist(access_token, playlistID, current.item.uri);
@@ -133,6 +142,7 @@ const start = async () => {
   //       `Track '${current.item.name}' by ${artistString} has been removed from Liked Songs.`
   //     );
   //   });
+  // TODO: confirm or manually add and remove playlists.
 };
 
 start();
@@ -240,4 +250,55 @@ const playlistIncludes = (token, playlist, song) => {
       });
       return playlistIncludesSong;
     });
+};
+
+const artistsToString = (artists) => {
+  return artists.reduce((accumulator, artist, index, artists) => {
+    if (index === 0) {
+      return artist.name;
+    } else if (index === artists.length - 1) {
+      return `${accumulator}, and ${artist.name}`;
+    } else {
+      return `${accumulator}, ${artist.name}`;
+    }
+  }, "");
+};
+
+const sort = (song) => {
+  let tags = [];
+
+  if (!song.explicit) {
+    tags.push("clean");
+  }
+
+  if (song.popularity > 90) {
+    tags.push("trendy");
+  }
+
+  let release = DateTime.fromISO(song.album.release_date);
+  if (release < DateTime.fromISO("1940")) {
+    tags.push("oldies");
+  } else if (release < DateTime.fromISO("1950")) {
+    tags.push("40s");
+  } else if (release < DateTime.fromISO("1960")) {
+    tags.push("50s");
+  } else if (release < DateTime.fromISO("1970")) {
+    tags.push("60s");
+  } else if (release < DateTime.fromISO("1980")) {
+    tags.push("70s");
+  } else if (release < DateTime.fromISO("1990")) {
+    tags.push("80s");
+  } else if (release < DateTime.fromISO("2000")) {
+    tags.push("90s");
+  } else if (release < DateTime.fromISO("2010")) {
+    tags.push("00s");
+  } else if (release < DateTime.fromISO("2020")) {
+    tags.push("10s");
+  } else {
+    tags.push("20s");
+  }
+
+  // TODO: add manual tag questionaire
+
+  return tags;
 };
