@@ -20,6 +20,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@amnesic0blex/dice": "^1.0.6",
     "@hapi/hapi": "^20.1.5",
     "axios": "^0.21.1",
     "commander": "^8.1.0",
