@@ -330,7 +330,8 @@ const tagSong = async (song) => {
 
   // ask tag questions from prompts.json
   await inquirer.prompt(prompts).then((answers) => {
-    logger.info(answers);
+    logger.verbose("Tags from prompts:");
+    logger.verbose(answers);
     for (let answer in answers) {
       tags = tags.concat(answers[answer]);
     }
@@ -343,7 +344,8 @@ const sort = async (song) => {
   const allPlaylists = require("./playlists.json");
   let tags = await tagSong(song);
 
-  logger.info(tags);
+  logger.verbose("All tags:");
+  logger.verbose(tags);
 
   let playlists = allPlaylists.filter((playlist) => {
     let hasAll = playlist.mandatoryTags.every((tag) => tags.includes(tag));
