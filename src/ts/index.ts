@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-const fs = require("fs");
-const { program } = require("commander");
-const spotify = require("./spotify");
-const logger = require("./logger");
+import { program } from "commander";
+import * as spotify from "./spotify";
+import logger from "./logger";
 
 program
   .option(
@@ -10,7 +9,11 @@ program
     "downloads all playlist tag info to playlists.json."
   )
   .option("-v, --verbose", "Displays more information.") // TODO: implement these
-  .option("--no-sort", "doesn't sort the currently playing song.")
+  .option(
+    "-t --suggest-tags",
+    "Suggest playlist tag changes based on the manual playlist selections."
+  )
+  .option("--no-sort", "Doesn't sort the currently playing song.")
   .option("-l, --level <level>", "The npm logging level to be displayed.");
 
 // TODO: misc tags
@@ -50,12 +53,14 @@ const start = async () => {
     }
 
     if (options.sort) {
-      await spotify.sort(current.item);
+      await spotify.sort(current.item, options);
     }
 
     // TODO: select from sieve playlists
     // TODO: add update tag prompts function
   }
 };
+
+// TODO: keep persistant logs of sorted songs?
 
 start();
