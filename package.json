@@ -1,5 +1,5 @@
 {
-  "name": "@amnesicoblex/sortify",
+  "name": "sortify",
   "version": "1.0.0",
   "description": "Customizable CLI sieve to sort songs into playlists using the Spotify API.",
   "main": "index.js",
@@ -11,12 +11,12 @@
   },
   "author": {
     "name": "Taylor Lindsey",
-    "email": "AmnesicOblex@gmail.com",
+    "email": "justtaylorlindsey@gmail.com",
     "url": "https://www.linkedin.com/in/taylor-lindsey-b05335209/"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:AmnesicOblex/sortify.git"
+    "url": "git@github.com:justTaylor97/sortify.git"
   },
   "license": "ISC",
   "dependencies": {
