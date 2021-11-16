@@ -384,13 +384,13 @@ const sort = async (song) => {
     // TODO: custom searchable prompt
     playlists = await inquirer
       .prompt({
-        name: "correctPlaylists",
+        name: "manualPlaylists",
         type: "checkbox",
         message: "Select the correct playlists",
         choices: playlistChoices,
       })
-      .then(({ correctPlaylists }) => {
-        return correctPlaylists;
+      .then(({ manualPlaylists }) => {
+        return manualPlaylists;
       });
   }
 
