@@ -1,5 +1,5 @@
 {
-  "name": "playlist-sieve",
+  "name": "sortify",
   "version": "1.0.0",
   "description": "Customizable sieve to sort songs into playlists.",
   "main": "index.js",
