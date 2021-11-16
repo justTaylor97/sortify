@@ -2,12 +2,9 @@ const axios = require("axios");
 const fs = require("fs");
 const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
-const auth = require("./spotify-auth");
+import * as spotify from "./spotify";
 let { ignoredTags, prompts } = require("./tags.json");
 import logger from "./logger";
-
-const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
-let { access_token, refresh_token } = require("./token.json");
 
 // TODO: add comprehensive JSDoc comments
 // TODO: pull out any non-general Spotify API specific functions into sort-track module
@@ -15,183 +12,53 @@ let { access_token, refresh_token } = require("./token.json");
 // TODO: create 'SpotifyPlaylist' type
 // TODO: create 'SpotifyTrack' type
 // TODO: create 'SpotifyTag' type
-/**
- * Checks the token on process startup.
- */
-export const checkToken = async () => {
-  if (access_token == undefined) {
-    updateToken(await auth.setToken(refresh_token));
-  }
-  return getCurrentPlayback()
-    .catch(async () => {
-      // TODO: move this to an on unhandled rejection catchall
-      console.info("Access token expired, trying to refresh.");
-      updateToken(await auth.refreshToken(refresh_token));
-      // FIXME: when this fails it logs the error despite the catch
-      return getCurrentPlayback();
-    })
-    .catch(async () => {
-      console.info("Refresh failed, requesting new token.");
-      updateToken(await auth.setToken());
-      return getCurrentPlayback();
-    });
-};
 
-/**
- * Get information about the user’s current playback state, including track or episode, progress, and active device.
- */
-export const getCurrentPlayback = () => {
-  return spotify.get("me/player/currently-playing", {
-    params: {
-      market: "from_token",
-    },
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
-};
-
-/**
- * Get information about the user’s current playback state, including track or episode, progress, and active device.
- */
-export const getTrackAudioFeatures = (trackId: string) => {
-  return spotify.get(`audio-features/${trackId}`, {
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
-};
-
-/**
- * Updates the cached token data in token.json
- * @param {*} data The access_token, refresh_token, and other token data.
- */
-export const updateToken = (data: any) => {
-  data = {
-    refresh_token,
-    ...data,
-  };
-  access_token = data.access_token;
-  fs.writeFile(
-    `${__dirname}/token.json`,
-    JSON.stringify(data, null, 2),
-    (err: Error) => {
-      if (err) {
-        throw err;
-      }
-      console.info("token.json updated!");
-    }
-  );
-};
-
-export const artistsToString = (artists: any) => {
-  return artists.reduce(
-    (accumulator: string, artist: any, index: number, artists: any[]) => {
-      if (index === 0) {
-        return artist.name;
-      } else if (index === artists.length - 1) {
-        return `${accumulator}, and ${artist.name}`;
+export const addCommand = (program: any) => {
+  program
+    .command("song")
+    .description("sorts the given playlist")
+    .option(
+      "-r, --refresh-playlists",
+      "downloads all playlist tag info to playlists.json."
+    )
+    .option(
+      "-t --suggest-tags",
+      "Suggest playlist tag changes based on the manual playlist selections."
+    )
+    .option("--no-sort", "Doesn't sort the currently playing song.")
+    .action(async (options: any) => {
+      let { data: current } = await spotify.checkToken();
+      if (current == "") {
+        logger.warn("Please listen to a song to sort.");
       } else {
-        return `${accumulator}, ${artist.name}`;
-      }
-    },
-    ""
-  );
-};
+        let artistString = spotify.artistsToString(current.item.artists);
+        logger.info(
+          `Currently listening to '${current.item.name}' by ${artistString}.`
+        );
 
-/**
- * Remove song from Liked Songs
- * @param {*} song
- */
-export const unlikeSong = (song: any) => {
-  return spotify
-    .delete("me/tracks", {
-      params: {
-        ids: song.id,
-      },
-      headers: { Authorization: `Bearer ${access_token}` },
-    })
-    .then(() => {
-      logger.info(
-        `Track '${song.name}' by ${artistsToString(
-          song.artists
-        )} has been removed from Liked Songs.`
-      );
-    });
-};
+        logger.verbose(`Release Date: ${current.item.album.release_date}`);
+        logger.verbose(`Explicit: ${current.item.explicit}`);
+        logger.verbose(`Popularity: ${current.item.popularity}`);
 
-/**
- * Gets 50 of the current users playlists.
- * @param {*} offset What index playlist to start fetching from.
- * @returns
- */
-export const getPlaylists = (offset = 0) => {
-  return spotify.get("me/playlists", {
-    params: { limit: 50, offset },
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
-};
-
-/**
- * Gets the given playlist
- * @param {*} playlistId
- * @returns
- */
-export const getPlaylist = (playlistId: string, opts = {}) => {
-  return spotify.get(`playlists/${playlistId}`, {
-    params: opts,
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
-};
-
-/**
- * Gets all of the current user's playlists.
- * @returns
- */
-export const getAllPlaylists = async () => {
-  let offset = 0;
-  let data = (await getPlaylists(offset)).data;
-  let allPlaylists = data.items;
-  while (data.items.length > 0) {
-    offset += 50;
-    data = (await getPlaylists(offset)).data;
-    allPlaylists = allPlaylists.concat(data.items);
-  }
-  return allPlaylists;
-};
-
-// TODO: in ts make this work for arrays
-export const addToPlaylist = async (playlist: any, song: any) => {
-  if (!(await playlistIncludes(playlist, song))) {
-    return spotify.post(
-      `playlists/${playlist}/tracks`,
-      {
-        uris: [song],
-      },
-      {
-        headers: { Authorization: `Bearer ${access_token}` },
-      }
-    );
-  }
-};
-
-export const playlistIncludes = (playlist: any, song: any) => {
-  return spotify
-    .get(`playlists/${playlist}/tracks`, {
-      param: { market: "from_token" },
-      headers: { Authorization: `Bearer ${access_token}` },
-    })
-    .then(({ data }: { data: any }) => {
-      let playlistIncludesSong = false;
-      data.items.forEach((item: any) => {
-        if (item.track.uri === song) {
-          playlistIncludesSong = true;
+        // fetch all playlists for caching and tagging
+        if (options.refreshPlaylists) {
+          await refreshPlaylistTags();
         }
-      });
-      return playlistIncludesSong;
+
+        if (options.sort) {
+          await sort(current.item, options);
+        }
+
+        // TODO: select from sieve playlists
+        // TODO: add update tag prompts function
+      }
     });
 };
 
 export const getPlaylistTags = async () => {
   let tagMap = new Map();
   let taggedPlaylists: any[] = [];
-  let playlists = await getAllPlaylists();
+  let playlists = await spotify.getAllPlaylists();
   let newTags: any[] = [];
 
   // compiles a list of current cached tags
@@ -497,7 +364,8 @@ export const sort = async (song: any, options: any) => {
     let movePromises: Promise<any>[] = [];
     playlists.forEach((playlist: any) => {
       movePromises.push(
-        addToPlaylist(playlist.uri.split(":")[2], song.uri)
+        spotify
+          .addToPlaylist(playlist.uri.split(":")[2], song.uri)
           .then((res) => {
             // TODO: put this in the function?
             if (res == undefined) {
@@ -515,7 +383,7 @@ export const sort = async (song: any, options: any) => {
       );
     });
     Promise.all(movePromises).then(() => {
-      unlikeSong(song);
+      spotify.unlikeSong(song);
     });
   }
 

@@ -112,3 +112,99 @@ export const getTrackAudioFeatures = (trackIds: string | string[]) => {
     });
   }
 };
+
+/**
+ * Remove song from Liked Songs
+ * @param {*} song
+ */
+export const unlikeSong = (song: any) => {
+  return spotify
+    .delete("me/tracks", {
+      params: {
+        ids: song.id,
+      },
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    .then(() => {
+      logger.info(
+        `Track '${song.name}' by ${artistsToString(
+          song.artists
+        )} has been removed from Liked Songs.`
+      );
+    });
+};
+
+export const artistsToString = (artists: any) => {
+  return artists.reduce(
+    (accumulator: string, artist: any, index: number, artists: any[]) => {
+      if (index === 0) {
+        return artist.name;
+      } else if (index === artists.length - 1) {
+        return `${accumulator}, and ${artist.name}`;
+      } else {
+        return `${accumulator}, ${artist.name}`;
+      }
+    },
+    ""
+  );
+};
+
+/**
+ * Gets 50 of the current users playlists.
+ * @param {*} offset What index playlist to start fetching from.
+ * @returns
+ */
+export const getPlaylists = (offset = 0) => {
+  return spotify.get("me/playlists", {
+    params: { limit: 50, offset },
+    headers: { Authorization: `Bearer ${access_token}` },
+  });
+};
+
+/**
+ * Gets all of the current user's playlists.
+ * @returns
+ */
+export const getAllPlaylists = async () => {
+  let offset = 0;
+  let data = (await getPlaylists(offset)).data;
+  let allPlaylists = data.items;
+  while (data.items.length > 0) {
+    offset += 50;
+    data = (await getPlaylists(offset)).data;
+    allPlaylists = allPlaylists.concat(data.items);
+  }
+  return allPlaylists;
+};
+
+export const playlistIncludes = (playlist: any, song: any) => {
+  return spotify
+    .get(`playlists/${playlist}/tracks`, {
+      param: { market: "from_token" },
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    .then(({ data }: { data: any }) => {
+      let playlistIncludesSong = false;
+      data.items.forEach((item: any) => {
+        if (item.track.uri === song) {
+          playlistIncludesSong = true;
+        }
+      });
+      return playlistIncludesSong;
+    });
+};
+
+// TODO: in ts make this work for arrays
+export const addToPlaylist = async (playlist: any, song: any) => {
+  if (!(await playlistIncludes(playlist, song))) {
+    return spotify.post(
+      `playlists/${playlist}/tracks`,
+      {
+        uris: [song],
+      },
+      {
+        headers: { Authorization: `Bearer ${access_token}` },
+      }
+    );
+  }
+};
