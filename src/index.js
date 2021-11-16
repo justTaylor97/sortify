@@ -1,6 +1,9 @@
+#!/usr/bin/env node
 const fs = require("fs");
 const axios = require("axios");
 const auth = require("./auth");
+// TODO: inquirer?
+// TODO: commander?
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
 let { access_token, refresh_token } = require("./token.json");
