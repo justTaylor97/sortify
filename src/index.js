@@ -9,6 +9,7 @@ let { access_token, refresh_token } = require("./token.json");
 const start = async () => {
   if (access_token == undefined) {
     let data = await auth.setToken();
+    // TODO: convert token updating to a function?
     access_token = data.access_token;
     fs.writeFile(
       `${__dirname}/token.json`,
@@ -21,12 +22,55 @@ const start = async () => {
       }
     );
   }
-  let { data: current } = await spotify.get("me/player/currently-playing", {
-    params: {
-      market: "from_token",
-    },
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
+  let { data: current } = await spotify
+    .get("me/player/currently-playing", {
+      params: {
+        market: "from_token",
+      },
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    .catch(async () => {
+      console.log("Access token expired, trying to refresh.");
+      let data = await auth.refreshToken(refresh_token);
+      access_token = data.access_token;
+      fs.writeFile(
+        `${__dirname}/token.json`,
+        JSON.stringify(data, null, 2),
+        (err) => {
+          if (err) {
+            throw err;
+          }
+          console.log("token.json updated!");
+        }
+      );
+      return spotify.get("me/player/currently-playing", {
+        params: {
+          market: "from_token",
+        },
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+    })
+    .catch(async () => {
+      console.log("Refresh failed, requesting new token.");
+      let data = await auth.setToken(refresh_token);
+      access_token = data.access_token;
+      fs.writeFile(
+        `${__dirname}/token.json`,
+        JSON.stringify(data, null, 2),
+        (err) => {
+          if (err) {
+            throw err;
+          }
+          console.log("token.json updated!");
+        }
+      );
+      return spotify.get("me/player/currently-playing", {
+        params: {
+          market: "from_token",
+        },
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+    });
 
   // TODO: move to a function
   // build a string with the artists
