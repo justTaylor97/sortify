@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { program } from "commander";
-import * as spotify from "./spotify";
+import * as sortSong from "./sort-song";
 import logger from "./logger";
 
 program
@@ -34,11 +34,11 @@ if (options.level) {
 }
 
 const start = async () => {
-  let { data: current } = await spotify.checkToken();
+  let { data: current } = await sortSong.checkToken();
   if (current == "") {
     logger.warn("Please listen to a song to sort.");
   } else {
-    let artistString = spotify.artistsToString(current.item.artists);
+    let artistString = sortSong.artistsToString(current.item.artists);
     logger.info(
       `Currently listening to '${current.item.name}' by ${artistString}.`
     );
@@ -49,11 +49,11 @@ const start = async () => {
 
     // fetch all playlists for caching and tagging
     if (options.refreshPlaylists) {
-      await spotify.refreshPlaylistTags();
+      await sortSong.refreshPlaylistTags();
     }
 
     if (options.sort) {
-      await spotify.sort(current.item, options);
+      await sortSong.sort(current.item, options);
     }
 
     // TODO: select from sieve playlists

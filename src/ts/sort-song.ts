@@ -2,19 +2,23 @@ const axios = require("axios");
 const fs = require("fs");
 const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
-const auth = require("./auth");
+const auth = require("./spotify-auth");
 let { ignoredTags, prompts } = require("./tags.json");
-const logger = require("./logger");
+import logger from "./logger";
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
 let { access_token, refresh_token } = require("./token.json");
 
-// TODO: convert this to typescript
 // TODO: add comprehensive JSDoc comments
+// TODO: pull out any non-general Spotify API specific functions into sort-track module
+// TODO: clean up all 'any' type declarations
+// TODO: create 'SpotifyPlaylist' type
+// TODO: create 'SpotifyTrack' type
+// TODO: create 'SpotifyTag' type
 /**
  * Checks the token on process startup.
  */
-const checkToken = async () => {
+export const checkToken = async () => {
   if (access_token == undefined) {
     updateToken(await auth.setToken(refresh_token));
   }
@@ -36,7 +40,7 @@ const checkToken = async () => {
 /**
  * Get information about the user’s current playback state, including track or episode, progress, and active device.
  */
-const getCurrentPlayback = () => {
+export const getCurrentPlayback = () => {
   return spotify.get("me/player/currently-playing", {
     params: {
       market: "from_token",
@@ -46,10 +50,19 @@ const getCurrentPlayback = () => {
 };
 
 /**
+ * Get information about the user’s current playback state, including track or episode, progress, and active device.
+ */
+export const getTrackAudioFeatures = (trackId: string) => {
+  return spotify.get(`audio-features/${trackId}`, {
+    headers: { Authorization: `Bearer ${access_token}` },
+  });
+};
+
+/**
  * Updates the cached token data in token.json
  * @param {*} data The access_token, refresh_token, and other token data.
  */
-const updateToken = (data) => {
+export const updateToken = (data: any) => {
   data = {
     refresh_token,
     ...data,
@@ -58,7 +71,7 @@ const updateToken = (data) => {
   fs.writeFile(
     `${__dirname}/token.json`,
     JSON.stringify(data, null, 2),
-    (err) => {
+    (err: Error) => {
       if (err) {
         throw err;
       }
@@ -67,23 +80,26 @@ const updateToken = (data) => {
   );
 };
 
-const artistsToString = (artists) => {
-  return artists.reduce((accumulator, artist, index, artists) => {
-    if (index === 0) {
-      return artist.name;
-    } else if (index === artists.length - 1) {
-      return `${accumulator}, and ${artist.name}`;
-    } else {
-      return `${accumulator}, ${artist.name}`;
-    }
-  }, "");
+export const artistsToString = (artists: any) => {
+  return artists.reduce(
+    (accumulator: string, artist: any, index: number, artists: any[]) => {
+      if (index === 0) {
+        return artist.name;
+      } else if (index === artists.length - 1) {
+        return `${accumulator}, and ${artist.name}`;
+      } else {
+        return `${accumulator}, ${artist.name}`;
+      }
+    },
+    ""
+  );
 };
 
 /**
  * Remove song from Liked Songs
  * @param {*} song
  */
-const unlikeSong = (song) => {
+export const unlikeSong = (song: any) => {
   return spotify
     .delete("me/tracks", {
       params: {
@@ -105,9 +121,21 @@ const unlikeSong = (song) => {
  * @param {*} offset What index playlist to start fetching from.
  * @returns
  */
-const getPlaylists = (offset = 0) => {
+export const getPlaylists = (offset = 0) => {
   return spotify.get("me/playlists", {
     params: { limit: 50, offset },
+    headers: { Authorization: `Bearer ${access_token}` },
+  });
+};
+
+/**
+ * Gets the given playlist
+ * @param {*} playlistId
+ * @returns
+ */
+export const getPlaylist = (playlistId: string, opts = {}) => {
+  return spotify.get(`playlists/${playlistId}`, {
+    params: opts,
     headers: { Authorization: `Bearer ${access_token}` },
   });
 };
@@ -116,7 +144,7 @@ const getPlaylists = (offset = 0) => {
  * Gets all of the current user's playlists.
  * @returns
  */
-const getAllPlaylists = async () => {
+export const getAllPlaylists = async () => {
   let offset = 0;
   let data = (await getPlaylists(offset)).data;
   let allPlaylists = data.items;
@@ -129,7 +157,7 @@ const getAllPlaylists = async () => {
 };
 
 // TODO: in ts make this work for arrays
-const addToPlaylist = async (playlist, song) => {
+export const addToPlaylist = async (playlist: any, song: any) => {
   if (!(await playlistIncludes(playlist, song))) {
     return spotify.post(
       `playlists/${playlist}/tracks`,
@@ -143,15 +171,15 @@ const addToPlaylist = async (playlist, song) => {
   }
 };
 
-const playlistIncludes = (playlist, song) => {
+export const playlistIncludes = (playlist: any, song: any) => {
   return spotify
     .get(`playlists/${playlist}/tracks`, {
       param: { market: "from_token" },
       headers: { Authorization: `Bearer ${access_token}` },
     })
-    .then(({ data }) => {
+    .then(({ data }: { data: any }) => {
       let playlistIncludesSong = false;
-      data.items.forEach((item) => {
+      data.items.forEach((item: any) => {
         if (item.track.uri === song) {
           playlistIncludesSong = true;
         }
@@ -160,31 +188,31 @@ const playlistIncludes = (playlist, song) => {
     });
 };
 
-const getPlaylistTags = async () => {
+export const getPlaylistTags = async () => {
   let tagMap = new Map();
-  let taggedPlaylists = [];
+  let taggedPlaylists: any[] = [];
   let playlists = await getAllPlaylists();
-  let newTags = [];
+  let newTags: any[] = [];
 
   // compiles a list of current cached tags
-  prompts.forEach((prompt) => {
-    prompt.choices.forEach((tag) => {
+  prompts.forEach((prompt: any) => {
+    prompt.choices.forEach((tag: any) => {
       tagMap.set(tag, []);
     });
   });
-  ignoredTags.forEach((tag) => {
+  ignoredTags.forEach((tag: any) => {
     tagMap.set(tag, []);
   });
 
-  playlists.forEach((playlist) => {
+  playlists.forEach((playlist: any) => {
     if (playlist.description != undefined && playlist.description != "") {
       let tags = playlist.description.split("#");
-      let mandatoryTags = [];
-      let optionalTags = [];
-      let excludeTags = [];
+      let mandatoryTags: any[] = [];
+      let optionalTags: any[] = [];
+      let excludeTags: any[] = [];
       tags.shift();
 
-      tags.forEach((tag) => {
+      tags.forEach((tag: any) => {
         let name = playlist.name;
         tag = tag.trim();
         if (tag[0] == "?") {
@@ -210,9 +238,9 @@ const getPlaylistTags = async () => {
         }
       });
       if (
-        (mandatoryTags.length !== 0) |
-        (optionalTags.length !== 0) |
-        (excludeTags.length != 0)
+        mandatoryTags.length !== 0 ||
+        optionalTags.length !== 0 ||
+        excludeTags.length != 0
       ) {
         taggedPlaylists.push({
           name: playlist.name,
@@ -235,17 +263,17 @@ const getPlaylistTags = async () => {
   };
 };
 
-const importNewTags = async (newTags) => {
-  let tagPrompts = [];
-  let categories = [];
+export const importNewTags = async (newTags: any) => {
+  let tagPrompts: any[] = [];
+  let categories: any[] = [];
 
-  prompts.forEach((prompt, index) => {
+  prompts.forEach((prompt: any, index: number) => {
     categories.push({ name: prompt.name, value: index });
   });
   categories.push({ name: "ignored (not recommended)", value: -1 });
   categories.push({ name: "skip", value: -2 });
 
-  newTags.forEach((newTag) => {
+  newTags.forEach((newTag: any) => {
     tagPrompts.push({
       name: newTag,
       type: "list",
@@ -254,7 +282,7 @@ const importNewTags = async (newTags) => {
     });
   });
 
-  await inquirer.prompt(tagPrompts).then((answers) => {
+  await inquirer.prompt(tagPrompts).then((answers: any[]) => {
     for (let tag in answers) {
       let index = answers[tag];
       if (index === -1) {
@@ -266,7 +294,7 @@ const importNewTags = async (newTags) => {
 
     // sorts tags in a category alphabetically
     ignoredTags.sort();
-    prompts.forEach((prompt) => {
+    prompts.forEach((prompt: any) => {
       prompt.choices.sort();
     });
 
@@ -274,7 +302,7 @@ const importNewTags = async (newTags) => {
     fs.writeFile(
       `${__dirname}/tags.json`,
       JSON.stringify({ prompts, ignoredTags }, null, 2),
-      (err) => {
+      (err: Error) => {
         if (err) throw err;
         logger.info("tags updated!");
       }
@@ -282,9 +310,9 @@ const importNewTags = async (newTags) => {
   });
 };
 
-const refreshPlaylistTags = async () => {
+export const refreshPlaylistTags = async () => {
   logger.info("Downloading playlists with tag information...");
-  let { taggedPlaylists, tagMap } = await getPlaylistTags(access_token);
+  let { taggedPlaylists, tagMap } = await getPlaylistTags();
   logger.verbose(taggedPlaylists);
   logger.verbose(tagMap);
   fs.writeFileSync(
@@ -294,8 +322,8 @@ const refreshPlaylistTags = async () => {
   logger.info("playlists.json updated!");
 };
 
-const tagSong = async (song) => {
-  let tags = [];
+export const tagSong = async (song: any) => {
+  let tags: any[] = [];
 
   if (!song.explicit) {
     tags.push("clean");
@@ -329,7 +357,7 @@ const tagSong = async (song) => {
   }
 
   // ask tag questions from prompts.json
-  await inquirer.prompt(prompts).then((answers) => {
+  await inquirer.prompt(prompts).then((answers: any[]) => {
     logger.verbose("Tags from prompts:");
     logger.verbose(answers);
     for (let answer in answers) {
@@ -340,27 +368,69 @@ const tagSong = async (song) => {
   return tags;
 };
 
-const sort = async (song) => {
+export const suggestTagsForExclusion = (playlist: any, tags: any[]) => {
+  // find potential negative tags for exclusion
+  let potentialExcludeTags = tags.filter((tag) => {
+    return !playlist.mandatoryTags.includes(tag);
+  });
+  potentialExcludeTags = potentialExcludeTags.filter((tag) => {
+    return !playlist.optionalTags.includes(tag);
+  });
+
+  // finds optional tags not included for potential mandatory tagging
+  let potentialMandatoryTags = playlist.optionalTags.filter((tag: any) => {
+    return !tags.includes(tag);
+  });
+
+  logger.info(
+    `Consider adding one or more of the following tags to the playlist '${playlist.name}' to prevent it from being incorrectly suggested for similar songs:`
+  );
+
+  potentialExcludeTags.forEach((tag) => {
+    logger.info(`#!${tag}`);
+  });
+
+  potentialMandatoryTags.forEach((tag: any) => {
+    logger.info(`#?${tag} -> #${tag}`);
+  });
+
+  // TODO: add a heatmap for tags?
+  // TODO: use heatmap to suggest new mandatory tags to require based on previous patterns
+};
+
+export const suggestTagsForInclusion = (playlist: any, tags: []) => {
+  // TODO: to exclude a playlist
+  // TODO: add a mandatory tag
+  // TODO: add a excludeTag
+  // TODO: to include a playlist
+  // TODO: add an include tag
+  // TODO: change an include to an optional
+  // TODO: remove an exclude
+};
+
+export const sort = async (song: any, options: any) => {
   const allPlaylists = require("./playlists.json");
   let tags = await tagSong(song);
 
   logger.verbose("All tags:");
   logger.verbose(tags);
 
-  let playlists = allPlaylists.filter((playlist) => {
-    let hasAll = playlist.mandatoryTags.every((tag) => tags.includes(tag));
+  let playlists = allPlaylists.filter((playlist: any) => {
+    let hasAll = playlist.mandatoryTags.every((tag: any) => tags.includes(tag));
     let hasAtLeastOne = true;
     if (playlist.optionalTags.length > 0) {
-      hasAtLeastOne = playlist.optionalTags.some((tag) => tags.includes(tag));
+      hasAtLeastOne = playlist.optionalTags.some((tag: any) =>
+        tags.includes(tag)
+      );
     }
-    let hasNone = !playlist.excludeTags.some((tag) => tags.includes(tag));
+    let hasNone = !playlist.excludeTags.some((tag: any) => tags.includes(tag));
 
     if (hasAll && hasAtLeastOne && hasNone) {
       return playlist;
     }
   });
 
-  playlists.forEach((playlist) => {
+  playlists.forEach((playlist: any) => {
     logger.info(playlist.name);
   });
 
@@ -371,11 +441,11 @@ const sort = async (song) => {
   });
 
   if (!correctPlaylists) {
-    let playlistChoices = allPlaylists.map((playlist) => {
+    let playlistChoices = allPlaylists.map((playlist: any) => {
       return {
         name: playlist.name,
         value: playlist,
-        checked: playlists.some((selectedPlaylist) => {
+        checked: playlists.some((selectedPlaylist: any) => {
           return selectedPlaylist.name == playlist.name;
         }),
       };
@@ -389,7 +459,26 @@ const sort = async (song) => {
         message: "Select the correct playlists",
         choices: playlistChoices,
       })
-      .then(({ manualPlaylists }) => {
+      .then(({ manualPlaylists }: { manualPlaylists: any[] }) => {
+        if (options.suggestTags) {
+          // Lists playlists removed from tag based suggestions
+          let removedPlaylists = playlists.filter((playlist: any) => {
+            return !manualPlaylists.includes(playlist);
+          });
+          removedPlaylists.forEach((removedPlaylist: any) => {
+            suggestTagsForExclusion(removedPlaylist, tags);
+          });
+
+          // Lists playlists added to tag based suggestions
+          let addedPlaylists = manualPlaylists.filter((manualPlaylist) => {
+            return !playlists.includes(manualPlaylist);
+          });
+
+          addedPlaylists.forEach((addedPlaylist) => {
+            suggestTagsForExclusion(addedPlaylist, tags);
+          });
+        }
+
         return manualPlaylists;
       });
   }
@@ -400,13 +489,13 @@ const sort = async (song) => {
       type: "confirm",
       message: `Do you want to move '${song.name}' to the selected playlists?`,
     })
-    .then(({ moveSong }) => {
+    .then(({ moveSong }: { moveSong: any }) => {
       return moveSong;
     });
 
   if (moveSong) {
-    let movePromises = [];
-    playlists.forEach((playlist) => {
+    let movePromises: Promise<any>[] = [];
+    playlists.forEach((playlist: any) => {
       movePromises.push(
         addToPlaylist(playlist.uri.split(":")[2], song.uri)
           .then((res) => {
@@ -431,21 +520,4 @@ const sort = async (song) => {
   }
 
   return playlists;
-};
-
-// TODO: hide some of these functions.
-module.exports = {
-  checkToken,
-  getCurrentPlayback,
-  updateToken,
-  artistsToString,
-  unlikeSong,
-  getPlaylists,
-  getAllPlaylists,
-  addToPlaylist,
-  playlistIncludes,
-  getPlaylistTags,
-  refreshPlaylistTags,
-  tagSong,
-  sort,
 };
