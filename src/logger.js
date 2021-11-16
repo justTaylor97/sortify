@@ -1,7 +1,7 @@
 const winston = require("winston");
 
-module.exports = winston.createLogger({
-  level: process.env.LOG_LEVEL ? process.env.LOG_LEVEL : "info",
+const logger = winston.createLogger({
+  level: "info",
   transports: [
     //
     // - Write all logs with level `error` and above to `error.log`
@@ -20,3 +20,5 @@ module.exports = winston.createLogger({
     }),
   ],
 });
+
+module.exports = logger;

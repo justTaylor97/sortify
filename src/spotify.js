@@ -4,6 +4,7 @@ const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
 const auth = require("./auth");
 const prompts = require("./prompts.json");
+const logger = require("./logger");
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
 let { access_token, refresh_token } = require("./token.json");
@@ -20,13 +21,13 @@ const checkToken = async () => {
   return getCurrentPlayback()
     .catch(async () => {
       // TODO: move this to an on unhandled rejection catchall
-      console.log("Access token expired, trying to refresh.");
+      console.info("Access token expired, trying to refresh.");
       updateToken(await auth.refreshToken(refresh_token));
       // FIXME: when this fails it logs the error despite the catch
       return getCurrentPlayback();
     })
     .catch(async () => {
-      console.log("Refresh failed, requesting new token.");
+      console.info("Refresh failed, requesting new token.");
       updateToken(await auth.setToken());
       return getCurrentPlayback();
     });
@@ -61,7 +62,7 @@ const updateToken = (data) => {
       if (err) {
         throw err;
       }
-      console.log("token.json updated!");
+      console.info("token.json updated!");
     }
   );
 };
@@ -91,7 +92,7 @@ const unlikeSong = (song) => {
       headers: { Authorization: `Bearer ${access_token}` },
     })
     .then(() => {
-      console.log(
+      logger.info(
         `Track '${song.name}' by ${artistsToString(
           song.artists
         )} has been removed from Liked Songs.`
@@ -214,14 +215,15 @@ const getPlaylistTags = async () => {
 };
 
 const refreshPlaylistTags = async () => {
-  console.log("Downloading playlists with tag information...");
+  logger.info("Downloading playlists with tag information...");
   let { taggedPlaylists, tagMap } = await getPlaylistTags(access_token);
-  console.log(taggedPlaylists);
+  logger.verbose(taggedPlaylists);
+  logger.verbose(tagMap);
   fs.writeFileSync(
     `${__dirname}/playlists.json`,
     JSON.stringify(taggedPlaylists, null, 2)
   );
-  console.log("playlists.json updated!");
+  logger.info("playlists.json updated!");
 };
 
 const tagSong = async (song) => {
@@ -260,7 +262,7 @@ const tagSong = async (song) => {
 
   // ask tag questions from prompts.json
   await inquirer.prompt(prompts).then((answers) => {
-    console.log(answers);
+    logger.info(answers);
     for (let answer in answers) {
       tags = tags.concat(answers[answer]);
     }
@@ -273,7 +275,7 @@ const sort = async (song) => {
   const allPlaylists = require("./playlists.json");
   let tags = await tagSong(song);
 
-  console.log(tags);
+  logger.info(tags);
 
   let playlists = allPlaylists.filter((playlist) => {
     let hasAll = playlist.mandatoryTags.every((tag) => tags.includes(tag));
@@ -289,7 +291,7 @@ const sort = async (song) => {
   });
 
   playlists.forEach((playlist) => {
-    console.log(playlist.name);
+    logger.info(playlist.name);
   });
 
   let { correctPlaylists } = await inquirer.prompt({
@@ -340,16 +342,16 @@ const sort = async (song) => {
           .then((res) => {
             // TODO: put this in the function?
             if (res == undefined) {
-              console.log(`'${song.name}' is already in ${playlist.name}.`);
+              logger.info(`'${song.name}' is already in ${playlist.name}.`);
             } else {
-              console.log(
+              logger.info(
                 `'${song.name}' has been successfully moved to ${playlist.name}.`
               );
             }
           })
           .catch((err) => {
-            console.log(`Error moving '${song.name}' to ${playlist.name}.`);
-            console.log(err);
+            logger.error(`Error moving '${song.name}' to ${playlist.name}.`);
+            logger.error(err);
           })
       );
     });
