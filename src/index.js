@@ -20,29 +20,34 @@ const options = program.opts();
 
 const start = async () => {
   let { data: current } = await spotify.checkToken();
+  if (current == "") {
+    console.log("Please listen to a song to sort.");
+  } else {
+    let artistString = spotify.artistsToString(current.item.artists);
+    console.log(
+      `Currently listening to '${current.item.name}' by ${artistString}.`
+    );
 
-  let artistString = spotify.artistsToString(current.item.artists);
-  console.log(
-    `Currently listening to '${current.item.name}' by ${artistString}.`
-  );
+    console.log("Release Date:", current.item.album.release_date);
+    console.log("Explicit:", current.item.explicit);
+    console.log("Popularity:", current.item.popularity);
 
-  console.log("Release Date:", current.item.album.release_date);
-  console.log("Explicit:", current.item.explicit);
-  console.log("Popularity:", current.item.popularity);
+    // fetch all playlists for caching and tagging
+    if (options.refreshPlaylists) {
+      await spotify.refreshPlaylistTags();
+    }
 
-  // fetch all playlists for caching and tagging
-  if (options.refreshPlaylists) {
-    await spotify.refreshPlaylistTags();
+    if (options.sort) {
+      let playlists = await spotify.sort(current.item);
+      console.log(playlists);
+    }
+
+    //
+
+    // addToPlaylist(access_token, playlistID, current.item.uri);
+    //
+    // TODO: confirm or manually add and remove playlists.
   }
-
-  if (options.sort) {
-    let tags = await spotify.sort(current.item);
-    console.log(tags);
-  }
-
-  // addToPlaylist(access_token, playlistID, current.item.uri);
-  //
-  // TODO: confirm or manually add and remove playlists.
 };
 
 start();
