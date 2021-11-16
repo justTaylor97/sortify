@@ -337,10 +337,15 @@ const sort = async (song) => {
     playlists.forEach((playlist) => {
       movePromises.push(
         addToPlaylist(playlist.uri.split(":")[2], song.uri)
-          .then(({ data }) => {
-            console.log(
-              `'${song.name}' has been successfully moved to ${playlist.name}.`
-            );
+          .then((res) => {
+            // TODO: put this in the function?
+            if (res == undefined) {
+              console.log(`'${song.name}' is already in ${playlist.name}.`);
+            } else {
+              console.log(
+                `'${song.name}' has been successfully moved to ${playlist.name}.`
+              );
+            }
           })
           .catch((err) => {
             console.log(`Error moving '${song.name}' to ${playlist.name}.`);

@@ -41,11 +41,7 @@ const start = async () => {
       await spotify.sort(current.item);
     }
 
-    //
-
-    // addToPlaylist(access_token, playlistID, current.item.uri);
-    //
-    // TODO: confirm or manually add and remove playlists.
+    // TODO: select from sieve playlists
   }
 };
 
