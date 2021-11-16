@@ -2,3 +2,4 @@ node_modules
 client.json
 token.json
 playlists.json
+prompts.json

@@ -19,7 +19,7 @@ program.parse(process.argv);
 const options = program.opts();
 
 const start = async () => {
-  let { data: current } = await spotify.getCurrentPlayback();
+  let { data: current } = await spotify.checkToken();
 
   let artistString = spotify.artistsToString(current.item.artists);
   console.log(

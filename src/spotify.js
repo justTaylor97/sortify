@@ -1,7 +1,9 @@
 const axios = require("axios");
 const fs = require("fs");
+const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
 const auth = require("./auth");
+const prompts = require("./prompts.json");
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
 let { access_token, refresh_token } = require("./token.json");
@@ -13,30 +15,19 @@ let { access_token, refresh_token } = require("./token.json");
  */
 const checkToken = async () => {
   if (access_token == undefined) {
-    await auth.setToken();
-    // TODO: convert token updating to a function?
-    access_token = data.access_token;
-    fs.writeFile(
-      `${__dirname}/token.json`,
-      JSON.stringify(data, null, 2),
-      (err) => {
-        if (err) {
-          throw err;
-        }
-        console.log("token.json updated!");
-      }
-    );
+    updateToken(await auth.setToken(refresh_token));
   }
-  getCurrentPlayback()
+  return getCurrentPlayback()
     .catch(async () => {
       // TODO: move this to an on unhandled rejection catchall
       console.log("Access token expired, trying to refresh.");
       updateToken(await auth.refreshToken(refresh_token));
+      // FIXME: when this fails it logs the error despite the catch
       return getCurrentPlayback();
     })
     .catch(async () => {
       console.log("Refresh failed, requesting new token.");
-      updateToken(await auth.setToken(refresh_token));
+      updateToken(await auth.setToken());
       return getCurrentPlayback();
     });
 };
@@ -270,16 +261,20 @@ const sort = async (song) => {
     tags.push("20s");
   }
 
-  // TODO: add manual tag questionaire
+  // ask tag questions from prompts.json
+  await inquirer.prompt(prompts).then((answers) => {
+    console.log(answers);
+    for (let answer in answers) {
+      tags = tags.concat(answers[answer]);
+    }
+  });
 
   return tags;
 };
 
-// TODO: see if this is a good flow
-checkToken();
-
 // TODO: hide some of these functions.
 module.exports = {
+  checkToken,
   getCurrentPlayback,
   updateToken,
   artistsToString,
