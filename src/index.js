@@ -2,8 +2,6 @@
 const fs = require("fs");
 const axios = require("axios");
 const auth = require("./auth");
-// TODO: inquirer?
-// TODO: commander?
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
 let { access_token, refresh_token } = require("./token.json");
@@ -15,9 +13,11 @@ const start = async () => {
     fs.writeFile(
       `${__dirname}/token.json`,
       JSON.stringify(data, null, 2),
-      (err, res) => {
-        console.log(err);
-        console.log(res);
+      (err) => {
+        if (err) {
+          throw err;
+        }
+        console.log("token.json updated!");
       }
     );
   }
@@ -47,14 +47,19 @@ const start = async () => {
     `Currently listening to '${current.item.name}' by ${artistString}.`
   );
 
-  // TODO: fetch all playlists for caching and tagging
-  // let {
-  //   data: { items: playlists },
-  // } = await getPlaylists(access_token);
-  // playlists.forEach((playlist) => {
-  //   console.log(playlist.name);
-  //   console.log(playlist.uri);
-  // });
+  // fetch all playlists for caching and tagging
+  let { taggedPlaylists, tagMap } = await getPlaylistTags(access_token);
+  console.log(tagMap);
+  fs.writeFile(
+    `${__dirname}/playlists.json`,
+    JSON.stringify(taggedPlaylists, null, 2),
+    (err) => {
+      if (err) {
+        throw err;
+      }
+      console.log("playlists.json updated!");
+    }
+  );
 
   // let playlistID = "0qLcANYAyF4sMipVPx5pCc";
 
@@ -81,6 +86,72 @@ const getPlaylists = (token, offset = 0) => {
     params: { limit: 50, offset },
     headers: { Authorization: `Bearer ${token}` },
   });
+};
+
+const getAllPlaylists = async (token) => {
+  let offset = 0;
+  let data = (await getPlaylists(token, offset)).data;
+  let allPlaylists = data.items;
+  while (data.items.length > 0) {
+    offset += 50;
+    data = (await getPlaylists(token, offset)).data;
+    allPlaylists = allPlaylists.concat(data.items);
+  }
+  return allPlaylists;
+};
+
+const getPlaylistTags = async (token) => {
+  let tagMap = new Map();
+  let taggedPlaylists = [];
+  let playlists = await getAllPlaylists(token);
+  playlists.forEach((playlist) => {
+    if (playlist.description != undefined && playlist.description != "") {
+      let tags = playlist.description.split("#");
+      let mandatoryTags = [];
+      let optionalTags = [];
+      let excludeTags = [];
+      tags.shift();
+
+      tags.forEach((tag) => {
+        let name = playlist.name;
+        tag = tag.trim();
+        if (tag[0] == "?") {
+          tag = tag.substring(1);
+          optionalTags.push(tag);
+          name = `?${name}`;
+        } else if (tag[0] == "!") {
+          tag = tag.substring(1);
+          excludeTags.push(tag);
+          name = `!${name}`;
+        } else {
+          mandatoryTags.push(tag);
+        }
+
+        if (tagMap.has(tag)) {
+          tagMap.set(tag, tagMap.get(tag).concat([name]));
+        } else {
+          tagMap.set(tag, [name]);
+        }
+      });
+      if (
+        (mandatoryTags.length !== 0) |
+        (optionalTags.length !== 0) |
+        (excludeTags.length != 0)
+      ) {
+        taggedPlaylists.push({
+          name: playlist.name,
+          uri: playlist.uri,
+          mandatoryTags,
+          optionalTags,
+          excludeTags,
+        });
+      }
+    }
+  });
+  return {
+    taggedPlaylists: taggedPlaylists,
+    tagMap: tagMap,
+  };
 };
 
 // TODO: in ts make this work for arrays
