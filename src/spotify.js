@@ -227,7 +227,7 @@ const refreshPlaylistTags = async () => {
   );
 };
 
-const sort = async (song) => {
+const tagSong = async (song) => {
   let tags = [];
 
   if (!song.explicit) {
@@ -272,6 +272,28 @@ const sort = async (song) => {
   return tags;
 };
 
+const sort = async (song) => {
+  const allPlaylists = require("./playlists.json");
+  let tags = await tagSong(song);
+
+  console.log(tags);
+
+  let playlists = allPlaylists.filter((playlist) => {
+    let hasAll = playlist.mandatoryTags.every((tag) => tags.includes(tag));
+    let hasAtLeastOne = true;
+    if (playlist.optionalTags.length > 0) {
+      hasAtLeastOne = playlist.optionalTags.some((tag) => tags.includes(tag));
+    }
+    let hasNone = !playlist.excludeTags.some((tag) => tags.includes(tag));
+
+    if (hasAll && hasAtLeastOne && hasNone) {
+      return playlist;
+    }
+  });
+
+  return playlists;
+};
+
 // TODO: hide some of these functions.
 module.exports = {
   checkToken,
@@ -285,5 +307,6 @@ module.exports = {
   playlistIncludes,
   getPlaylistTags,
   refreshPlaylistTags,
+  tagSong,
   sort,
 };
