@@ -13,9 +13,10 @@ program
   .option("--no-sort", "doesn't sort the currently playing song.")
   .option("-l, --level <level>", "The npm logging level to be displayed.");
 
-// TODO: add option to add tag to bucket
 // TODO: misc tags
-// TODO: add sieve playlist selection as command line option
+// TODO: add sieve origin playlist selection as command line option
+// TODO: add verbose logging to display playlist overlaps?
+// TODO: add interface for tag category editing.
 
 program.parse(process.argv);
 const options = program.opts();

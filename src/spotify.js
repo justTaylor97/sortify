@@ -3,7 +3,7 @@ const fs = require("fs");
 const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
 const auth = require("./auth");
-const prompts = require("./prompts.json");
+let { ignoredTags, prompts } = require("./tags.json");
 const logger = require("./logger");
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
@@ -164,6 +164,18 @@ const getPlaylistTags = async () => {
   let tagMap = new Map();
   let taggedPlaylists = [];
   let playlists = await getAllPlaylists();
+  let newTags = [];
+
+  // compiles a list of current cached tags
+  prompts.forEach((prompt) => {
+    prompt.choices.forEach((tag) => {
+      tagMap.set(tag, []);
+    });
+  });
+  ignoredTags.forEach((tag) => {
+    tagMap.set(tag, []);
+  });
+
   playlists.forEach((playlist) => {
     if (playlist.description != undefined && playlist.description != "") {
       let tags = playlist.description.split("#");
@@ -190,6 +202,10 @@ const getPlaylistTags = async () => {
         if (tagMap.has(tag)) {
           tagMap.set(tag, tagMap.get(tag).concat([name]));
         } else {
+          logger.info(
+            `New tag "${tag}" detected in playlist ${playlist.name}.`
+          );
+          newTags.push(tag);
           tagMap.set(tag, [name]);
         }
       });
@@ -208,10 +224,62 @@ const getPlaylistTags = async () => {
       }
     }
   });
+
+  if (newTags.length > 0) {
+    await importNewTags(newTags);
+  }
+
   return {
     taggedPlaylists: taggedPlaylists,
     tagMap: tagMap,
   };
+};
+
+const importNewTags = async (newTags) => {
+  let tagPrompts = [];
+  let categories = [];
+
+  prompts.forEach((prompt, index) => {
+    categories.push({ name: prompt.name, value: index });
+  });
+  categories.push({ name: "ignored (not recommended)", value: -1 });
+  categories.push({ name: "skip", value: -2 });
+
+  newTags.forEach((newTag) => {
+    tagPrompts.push({
+      name: newTag,
+      type: "list",
+      message: `New tag "${newTag}" detected. How do you want to categorize the new tag?"`,
+      choices: categories,
+    });
+  });
+
+  await inquirer.prompt(tagPrompts).then((answers) => {
+    for (let tag in answers) {
+      let index = answers[tag];
+      if (index === -1) {
+        ignoredTags.push(tag);
+      } else if (index !== -2) {
+        prompts[index].choices.push(tag);
+      }
+    }
+
+    // sorts tags in a category alphabetically
+    ignoredTags.sort();
+    prompts.forEach((prompt) => {
+      prompt.choices.sort();
+    });
+
+    // updates the tag json
+    fs.writeFile(
+      `${__dirname}/tags.json`,
+      JSON.stringify({ prompts, ignoredTags }, null, 2),
+      (err) => {
+        if (err) throw err;
+        logger.info("tags updated!");
+      }
+    );
+  });
 };
 
 const refreshPlaylistTags = async () => {
