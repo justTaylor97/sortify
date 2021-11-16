@@ -11,11 +11,11 @@ program
   )
   .option("-v, --verbose", "Displays more information.") // TODO: implement these
   .option("--no-sort", "doesn't sort the currently playing song.")
-  .option("-h, --help", "display help for command")
   .option("-l, --level <level>", "The npm logging level to be displayed.");
 
 // TODO: add option to add tag to bucket
 // TODO: misc tags
+// TODO: add sieve playlist selection as command line option
 
 program.parse(process.argv);
 const options = program.opts();
