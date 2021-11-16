@@ -26,7 +26,7 @@ if (options.verbose) {
 
 // TODO: handle weird cases in ts
 if (options.level) {
-  logger.level = level;
+  logger.level = options.level;
 }
 
 const start = async () => {
@@ -40,8 +40,8 @@ const start = async () => {
     );
 
     logger.verbose(`Release Date: ${current.item.album.release_date}`);
-    logger.verbose("Explicit:", current.item.explicit);
-    logger.verbose("Popularity:", current.item.popularity);
+    logger.verbose(`Explicit: ${current.item.explicit}`);
+    logger.verbose(`Popularity: ${current.item.popularity}`);
 
     // fetch all playlists for caching and tagging
     if (options.refreshPlaylists) {
