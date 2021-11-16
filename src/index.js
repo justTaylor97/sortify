@@ -38,8 +38,7 @@ const start = async () => {
     }
 
     if (options.sort) {
-      let playlists = await spotify.sort(current.item);
-      console.log(playlists);
+      await spotify.sort(current.item);
     }
 
     //

@@ -92,7 +92,9 @@ const unlikeSong = (song) => {
     })
     .then(() => {
       console.log(
-        `Track '${current.item.name}' by ${artistString} has been removed from Liked Songs.`
+        `Track '${song.name}' by ${artistsToString(
+          song.artists
+        )} has been removed from Liked Songs.`
       );
     });
 };
@@ -214,17 +216,12 @@ const getPlaylistTags = async () => {
 const refreshPlaylistTags = async () => {
   console.log("Downloading playlists with tag information...");
   let { taggedPlaylists, tagMap } = await getPlaylistTags(access_token);
-  console.log(tagMap);
-  fs.writeFile(
+  console.log(taggedPlaylists);
+  fs.writeFileSync(
     `${__dirname}/playlists.json`,
-    JSON.stringify(taggedPlaylists, null, 2),
-    (err) => {
-      if (err) {
-        throw err;
-      }
-      console.log("playlists.json updated!");
-    }
+    JSON.stringify(taggedPlaylists, null, 2)
   );
+  console.log("playlists.json updated!");
 };
 
 const tagSong = async (song) => {
@@ -291,7 +288,9 @@ const sort = async (song) => {
     }
   });
 
-  console.log(playlists); // FIXME: Make this print nicer.
+  playlists.forEach((playlist) => {
+    console.log(playlist.name);
+  });
 
   let { correctPlaylists } = await inquirer.prompt({
     name: "correctPlaylists",
@@ -321,6 +320,37 @@ const sort = async (song) => {
       .then(({ correctPlaylists }) => {
         return correctPlaylists;
       });
+  }
+
+  let moveSong = await inquirer
+    .prompt({
+      name: "moveSong",
+      type: "confirm",
+      message: `Do you want to move '${song.name}' to the selected playlists?`,
+    })
+    .then(({ moveSong }) => {
+      return moveSong;
+    });
+
+  if (moveSong) {
+    let movePromises = [];
+    playlists.forEach((playlist) => {
+      movePromises.push(
+        addToPlaylist(playlist.uri.split(":")[2], song.uri)
+          .then(({ data }) => {
+            console.log(
+              `'${song.name}' has been successfully moved to ${playlist.name}.`
+            );
+          })
+          .catch((err) => {
+            console.log(`Error moving '${song.name}' to ${playlist.name}.`);
+            console.log(err);
+          })
+      );
+    });
+    Promise.all(movePromises).then(() => {
+      unlikeSong(song);
+    });
   }
 
   return playlists;
