@@ -1,10 +1,19 @@
 #!/usr/bin/env node
 const fs = require("fs");
 const axios = require("axios");
+const { program } = require("commander");
 const auth = require("./auth");
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
 let { access_token, refresh_token } = require("./token.json");
+
+program.option(
+  "-r, --refresh-playlists",
+  "downloads all playlist tag info to playlists.json."
+);
+
+program.parse(process.argv);
+const options = program.opts();
 
 const start = async () => {
   if (access_token == undefined) {
@@ -92,18 +101,21 @@ const start = async () => {
   );
 
   // fetch all playlists for caching and tagging
-  let { taggedPlaylists, tagMap } = await getPlaylistTags(access_token);
-  console.log(tagMap);
-  fs.writeFile(
-    `${__dirname}/playlists.json`,
-    JSON.stringify(taggedPlaylists, null, 2),
-    (err) => {
-      if (err) {
-        throw err;
+  if (options.refreshPlaylists) {
+    console.log("Downloading playlists with tag information...");
+    let { taggedPlaylists, tagMap } = await getPlaylistTags(access_token);
+    console.log(tagMap);
+    fs.writeFile(
+      `${__dirname}/playlists.json`,
+      JSON.stringify(taggedPlaylists, null, 2),
+      (err) => {
+        if (err) {
+          throw err;
+        }
+        console.log("playlists.json updated!");
       }
-      console.log("playlists.json updated!");
-    }
-  );
+    );
+  }
 
   // let playlistID = "0qLcANYAyF4sMipVPx5pCc";
 
