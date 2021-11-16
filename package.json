@@ -7,7 +7,7 @@
     "test": "mocha"
   },
   "bin": {
-    "sortify": "./src/index.js"
+    "sortify": "./src/js/index.js"
   },
   "author": {
     "name": "Taylor Lindsey",
