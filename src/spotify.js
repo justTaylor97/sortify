@@ -291,6 +291,38 @@ const sort = async (song) => {
     }
   });
 
+  console.log(playlists); // FIXME: Make this print nicer.
+
+  let { correctPlaylists } = await inquirer.prompt({
+    name: "correctPlaylists",
+    type: "confirm",
+    message: "Are these playlists correct",
+  });
+
+  if (!correctPlaylists) {
+    let playlistChoices = allPlaylists.map((playlist) => {
+      return {
+        name: playlist.name,
+        value: playlist,
+        checked: playlists.some((selectedPlaylist) => {
+          return selectedPlaylist.name == playlist.name;
+        }),
+      };
+    });
+
+    // TODO: custom searchable prompt
+    playlists = await inquirer
+      .prompt({
+        name: "correctPlaylists",
+        type: "checkbox",
+        message: "Select the correct playlists",
+        choices: playlistChoices,
+      })
+      .then(({ correctPlaylists }) => {
+        return correctPlaylists;
+      });
+  }
+
   return playlists;
 };
 
