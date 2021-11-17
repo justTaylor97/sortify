@@ -1,5 +1,6 @@
 const Hapi = require("@hapi/hapi");
 const axios = require("axios");
+import logger from "./logger";
 const { client_id, client_secret, scopes } = require("./client.json");
 
 type AccessToken = {
@@ -11,7 +12,6 @@ const base64Client = Buffer.from(`${client_id}:${client_secret}`).toString(
   "base64"
 );
 
-// TODO: convert console logs to logger?
 const server = Hapi.server({
   port: 8888,
   host: "localhost",
@@ -29,7 +29,7 @@ const start = () => {
     });
 
     await server.start();
-    console.log("Server running on %s\n", server.info.uri);
+    logger.debug("Server running on %s\n", server.info.uri);
 
     let url = "https://accounts.spotify.com/authorize?response_type=code";
     url += `&client_id=${client_id}`;
@@ -37,12 +37,12 @@ const start = () => {
     url += `&redirect_uri=${encodeURIComponent(
       "http://localhost:8888/callback"
     )}`;
-    console.log(`Click to authorize app: ${url}`);
+    logger.info(`Click to authorize app: ${url}`);
   });
 };
 
 process.on("unhandledRejection", (err) => {
-  console.log(err);
+  logger.error(err);
   process.exit(1);
 });
 
@@ -89,11 +89,11 @@ const refreshToken = (refresh_token: string) => {
       }
     )
     .then(({ data }: { data: AccessToken }) => {
-      console.log(data);
+      logger.debug(data);
       return data;
     })
     .catch((err: Error) => {
-      console.log(err);
+      logger.error(err);
     });
 };
 
