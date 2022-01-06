@@ -4,7 +4,8 @@
   "description": "Customizable CLI sieve to sort songs into playlists using the Spotify API.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "prepublish": "tsc"
   },
   "bin": {
     "sortify": "./src/js/index.js"
