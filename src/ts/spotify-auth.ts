@@ -1,7 +1,27 @@
 const Hapi = require("@hapi/hapi");
 const axios = require("axios");
+const fs = require("fs");
 import logger from "./logger";
-const { client_id, client_secret, scopes } = require("./client.json");
+
+type ClientConfig = {
+  client_id: string;
+  client_secret: string;
+  scopes: string[];
+};
+let client: ClientConfig;
+
+try {
+  client = require("../conf/client.json");
+} catch (err) {
+  logger.warn(err);
+  client = {
+    client_id: "",
+    client_secret: "",
+    scopes: [],
+  };
+  fs.writeFileSync("../conf/client.json", JSON.stringify(client, null, 2));
+}
+const { client_id, client_secret, scopes } = client;
 
 type AccessToken = {
   access_token: string;

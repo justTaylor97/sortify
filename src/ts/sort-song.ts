@@ -3,7 +3,7 @@ const fs = require("fs");
 const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
 import * as spotify from "./spotify";
-let { ignoredTags, prompts } = require("./tags.json");
+let { ignoredTags, prompts } = require("../conf/tags.json");
 import logger from "./logger";
 
 // TODO: add comprehensive JSDoc comments
@@ -167,7 +167,7 @@ export const importNewTags = async (newTags: any) => {
 
     // updates the tag json
     fs.writeFile(
-      `${__dirname}/tags.json`,
+      `${__dirname}/../conf/tags.json`,
       JSON.stringify({ prompts, ignoredTags }, null, 2),
       (err: Error) => {
         if (err) throw err;
@@ -183,7 +183,7 @@ export const refreshPlaylistTags = async () => {
   logger.verbose(taggedPlaylists);
   logger.verbose(tagMap);
   fs.writeFileSync(
-    `${__dirname}/playlists.json`,
+    `${__dirname}/../conf/playlists.json`,
     JSON.stringify(taggedPlaylists, null, 2)
   );
   logger.info("playlists.json updated!");
@@ -276,7 +276,7 @@ export const suggestTagsForInclusion = (playlist: any, tags: []) => {
 };
 
 export const sort = async (song: any, options: any) => {
-  const allPlaylists = require("./playlists.json");
+  const allPlaylists = require("../conf/playlists.json");
   let tags = await tagSong(song);
 
   logger.verbose("All tags:");

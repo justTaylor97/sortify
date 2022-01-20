@@ -3,11 +3,11 @@ const fs = require("fs");
 const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
 const auth = require("./spotify-auth");
-let { ignoredTags, prompts } = require("./tags.json");
+let { ignoredTags, prompts } = require("../conf/tags.json");
 import logger from "./logger";
 
 const spotify = axios.create({ baseURL: "https://api.spotify.com/v1/" });
-let { access_token, refresh_token } = require("./token.json");
+let { access_token, refresh_token } = require("../conf/token.json");
 
 // TODO: separate calls into components and then pull together in import and reexport
 /**
@@ -43,7 +43,7 @@ export const updateToken = (data: any) => {
   };
   access_token = data.access_token;
   fs.writeFile(
-    `${__dirname}/token.json`,
+    `${__dirname}/../conf/token.json`,
     JSON.stringify(data, null, 2),
     (err: Error) => {
       if (err) {
