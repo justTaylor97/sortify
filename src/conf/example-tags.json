@@ -1,0 +1,37 @@
+{
+  "prompts": [
+    {
+      "name": "moods",
+      "type": "checkbox",
+      "message": "Select applicable moods",
+      "choices": ["angry", "chill", "focus", "happy", "sad"]
+    },
+    {
+      "name": "genres",
+      "type": "checkbox",
+      "message": "Select applicable genres",
+      "choices": [
+        "alt",
+        "classical",
+        "country",
+        "funk",
+        "pop",
+        "punk",
+        "rap",
+        "rock"
+      ]
+    }
+  ],
+  "ignoredTags": [
+    "20s",
+    "10s",
+    "00s",
+    "90s",
+    "80s",
+    "70s",
+    "60s",
+    "50s",
+    "40s",
+    "clean"
+  ]
+}
