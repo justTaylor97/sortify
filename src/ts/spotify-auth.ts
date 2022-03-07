@@ -1,36 +1,26 @@
 const Hapi = require("@hapi/hapi");
 const axios = require("axios");
 const fs = require("fs");
+const pkceChallenge = require("pkce-challenge");
 import logger from "./logger";
+let { code_verifier, code_challenge } = require("../conf/pkce.json");
 
-type ClientConfig = {
-  client_id: string;
-  client_secret: string;
-  scopes: string[];
-};
-let client: ClientConfig;
-
-try {
-  client = require("../conf/client.json");
-} catch (err) {
-  logger.warn(err);
-  client = {
-    client_id: "",
-    client_secret: "",
-    scopes: [],
-  };
-  fs.writeFileSync("../conf/client.json", JSON.stringify(client, null, 2));
-}
-const { client_id, client_secret, scopes } = client;
+// client_id and scopes
+const client_id = "3b2819276c5f46bd9eec240d553366a2";
+const scopes = [
+  "user-read-private",
+  "user-read-email",
+  "user-read-currently-playing",
+  "playlist-modify-public",
+  "playlist-modify-private",
+  "playlist-read-private",
+  "user-library-modify",
+  "playlist-read-collaborative",
+];
 
 type AccessToken = {
   access_token: string;
 };
-
-// sets base64Client
-const base64Client = Buffer.from(`${client_id}:${client_secret}`).toString(
-  "base64"
-);
 
 const server = Hapi.server({
   port: 8888,
@@ -51,9 +41,29 @@ const start = () => {
     await server.start();
     logger.debug("Server running on %s\n", server.info.uri);
 
+    // generate pkce challenge
+    const challenge = pkceChallenge();
+    code_challenge = challenge.code_challenge;
+    code_verifier = challenge.code_verifier;
+
+    // updated pkce.json with new values
+    fs.writeFile(
+      `${__dirname}/../conf/pkce.json`,
+      JSON.stringify({ code_challenge, code_verifier }, null, 2),
+      (err: Error) => {
+        if (err) {
+          logger.err(err);
+        } else {
+          logger.debug("pkce values updated!");
+        }
+      }
+    );
+
     let url = "https://accounts.spotify.com/authorize?response_type=code";
     url += `&client_id=${client_id}`;
     url += `&scope=${encodeURIComponent(scopes.join(" "))}`;
+    url += `&code_challenge_method=${encodeURIComponent("S256")}`;
+    url += `&code_challenge=${encodeURIComponent(code_challenge)}`;
     url += `&redirect_uri=${encodeURIComponent(
       "http://localhost:8888/callback"
     )}`;
@@ -75,12 +85,12 @@ const setToken = () => {
           grant_type: "authorization_code",
           code,
           redirect_uri: "http://localhost:8888/callback",
+          client_id: client_id,
+          code_verifier: code_verifier,
         }),
-        // TODO: generalize redirect_uri
         {
           headers: {
             "content-type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${base64Client}`,
           },
           params: {},
         }
@@ -99,11 +109,12 @@ const refreshToken = (refresh_token: string) => {
       new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token,
+        client_id: client_id,
+        code_verifier: code_verifier,
       }),
       {
         headers: {
           "content-type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${base64Client}`,
         },
         params: {},
       }

@@ -49,7 +49,7 @@ export const updateToken = (data: any) => {
       if (err) {
         throw err;
       }
-      console.info("token.json updated!");
+      logger.info("token.json updated!");
     }
   );
 };

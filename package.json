@@ -27,6 +27,7 @@
     "commander": "^8.1.0",
     "inquirer": "^8.1.2",
     "luxon": "^2.0.1",
+    "pkce-challenge": "^2.2.0",
     "winston": "^3.3.3"
   },
   "devDependencies": {
