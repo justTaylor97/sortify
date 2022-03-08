@@ -355,6 +355,10 @@ var sort = function (song, options) { return __awaiter(void 0, void 0, void 0, f
         switch (_a.label) {
             case 0:
                 allPlaylists = require("../conf/playlists.json");
+                if (allPlaylists.length === 0) {
+                    exports.refreshPlaylistTags();
+                    allPlaylists = require("../conf/playlists.json");
+                }
                 return [4 /*yield*/, exports.tagSong(song)];
             case 1:
                 tags = _a.sent();

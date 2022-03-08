@@ -276,7 +276,11 @@ export const suggestTagsForInclusion = (playlist: any, tags: []) => {
 };
 
 export const sort = async (song: any, options: any) => {
-  const allPlaylists = require("../conf/playlists.json");
+  let allPlaylists = require("../conf/playlists.json");
+  if (allPlaylists.length === 0) {
+    refreshPlaylistTags();
+    allPlaylists = require("../conf/playlists.json");
+  }
   let tags = await tagSong(song);
 
   logger.verbose("All tags:");
