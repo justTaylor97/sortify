@@ -50,7 +50,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addToPlaylist = exports.playlistIncludes = exports.getAllPlaylists = exports.getPlaylists = exports.artistsToString = exports.unlikeSong = exports.getTrackAudioFeatures = exports.overwritePlaylist = exports.getPlaylist = exports.getCurrentPlayback = exports.updateToken = exports.checkToken = void 0;
+exports.removeFromPlaylist = exports.addToPlaylist = exports.playlistIncludes = exports.getAllPlaylists = exports.getPlaylists = exports.artistsToString = exports.unlikeSong = exports.getTrackAudioFeatures = exports.overwritePlaylist = exports.getPlaylist = exports.getCurrentPlayback = exports.updateToken = exports.checkToken = void 0;
 var axios = require("axios");
 var fs = require("fs");
 var inquirer = require("inquirer");
@@ -290,3 +290,31 @@ var addToPlaylist = function (playlist, song) { return __awaiter(void 0, void 0,
     });
 }); };
 exports.addToPlaylist = addToPlaylist;
+var removeFromPlaylist = function (playlistId, song) { return __awaiter(void 0, void 0, void 0, function () {
+    var playlist;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, exports.getPlaylist(playlistId)];
+            case 1:
+                playlist = (_a.sent()).data;
+                return [4 /*yield*/, exports.playlistIncludes(playlistId, song.uri)];
+            case 2:
+                if (_a.sent()) {
+                    return [2 /*return*/, spotify
+                            .delete("playlists/" + playlistId + "/tracks", {
+                            data: { tracks: [{ uri: song.uri }] },
+                            headers: { Authorization: "Bearer " + access_token },
+                        })
+                            .then(function () {
+                            logger_1.default.info("Track '" + song.name + "' by " + exports.artistsToString(song.artists) + " has been removed from " + playlist.name + ".");
+                        })
+                            .catch(function (err) {
+                            logger_1.default.error("Error removing track '" + song.name + "' by " + exports.artistsToString(song.artists) + " from " + playlist.name + ".");
+                            logger_1.default.error(err);
+                        })];
+                }
+                return [2 /*return*/];
+        }
+    });
+}); };
+exports.removeFromPlaylist = removeFromPlaylist;

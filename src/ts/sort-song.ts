@@ -3,7 +3,7 @@ const fs = require("fs");
 const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
 import * as spotify from "./spotify";
-let { ignoredTags, prompts } = require("../conf/tags.json");
+let { ignoredTags, prompts, sievePlaylist } = require("../conf/tags.json");
 import logger from "./logger";
 
 // TODO: add comprehensive JSDoc comments
@@ -387,7 +387,13 @@ export const sort = async (song: any, options: any) => {
       );
     });
     Promise.all(movePromises).then(() => {
-      spotify.unlikeSong(song);
+      if (sievePlaylist === "Liked Songs") {
+        spotify.unlikeSong(song);
+      } else if (sievePlaylist != undefined) {
+        spotify.removeFromPlaylist(sievePlaylist, song);
+      } else {
+        logger.verbose("No sieve playlist configured.");
+      }
     });
   }
 

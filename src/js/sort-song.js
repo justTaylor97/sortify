@@ -64,7 +64,7 @@ var fs = require("fs");
 var inquirer = require("inquirer");
 var DateTime = require("luxon").DateTime;
 var spotify = __importStar(require("./spotify"));
-var _a = require("../conf/tags.json"), ignoredTags = _a.ignoredTags, prompts = _a.prompts;
+var _a = require("../conf/tags.json"), ignoredTags = _a.ignoredTags, prompts = _a.prompts, sievePlaylist = _a.sievePlaylist;
 var logger_1 = __importDefault(require("./logger"));
 // TODO: add comprehensive JSDoc comments
 // TODO: pull out any non-general Spotify API specific functions into sort-track module
@@ -460,7 +460,15 @@ var sort = function (song, options) { return __awaiter(void 0, void 0, void 0, f
                         }));
                     });
                     Promise.all(movePromises_1).then(function () {
-                        spotify.unlikeSong(song);
+                        if (sievePlaylist === "Liked Songs") {
+                            spotify.unlikeSong(song);
+                        }
+                        else if (sievePlaylist != undefined) {
+                            spotify.removeFromPlaylist(sievePlaylist, song);
+                        }
+                        else {
+                            logger_1.default.verbose("No sieve playlist configured.");
+                        }
                     });
                 }
                 return [2 /*return*/, playlists];

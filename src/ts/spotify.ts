@@ -208,3 +208,29 @@ export const addToPlaylist = async (playlist: any, song: any) => {
     );
   }
 };
+
+export const removeFromPlaylist = async (playlistId: any, song: any) => {
+  let { data: playlist } = await getPlaylist(playlistId);
+  if (await playlistIncludes(playlistId, song.uri)) {
+    return spotify
+      .delete(`playlists/${playlistId}/tracks`, {
+        data: { tracks: [{ uri: song.uri }] },
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+      .then(() => {
+        logger.info(
+          `Track '${song.name}' by ${artistsToString(
+            song.artists
+          )} has been removed from ${playlist.name}.`
+        );
+      })
+      .catch((err: Error) => {
+        logger.error(
+          `Error removing track '${song.name}' by ${artistsToString(
+            song.artists
+          )} from ${playlist.name}.`
+        );
+        logger.error(err);
+      });
+  }
+};
