@@ -50,7 +50,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeFromPlaylist = exports.addToPlaylist = exports.playlistIncludes = exports.getAllPlaylists = exports.getPlaylists = exports.artistsToString = exports.unlikeSong = exports.getTrackAudioFeatures = exports.overwritePlaylist = exports.getPlaylist = exports.getCurrentPlayback = exports.updateToken = exports.checkToken = void 0;
+exports.extractId = exports.removeFromPlaylist = exports.addToPlaylist = exports.playlistIncludes = exports.getAllPlaylists = exports.getPlaylists = exports.artistsToString = exports.unlikeSong = exports.getTrackAudioFeatures = exports.overwritePlaylist = exports.getPlaylist = exports.getCurrentPlayback = exports.updateToken = exports.checkToken = void 0;
 var axios = require("axios");
 var fs = require("fs");
 var inquirer = require("inquirer");
@@ -313,8 +313,28 @@ var removeFromPlaylist = function (playlistId, song) { return __awaiter(void 0, 
                             logger_1.default.error(err);
                         })];
                 }
+                else {
+                    logger_1.default.info("Track '" + song.name + "' by " + exports.artistsToString(song.artists) + " is not in " + playlist.name + ".");
+                }
                 return [2 /*return*/];
         }
     });
 }); };
 exports.removeFromPlaylist = removeFromPlaylist;
+var extractId = function (link) {
+    // checks for URI formatted spotify links
+    var regexURI = /spotify:[^:]*:(.*)/;
+    var matchesURI = link.match(regexURI);
+    if (matchesURI !== null) {
+        return matchesURI[1];
+    }
+    // checks for URL formatted spotify links
+    var regexURL = /https:\/\/open\.spotify\.com\/playlist\/([^?]*).*/;
+    var matchesURL = link.match(regexURL);
+    if (matchesURL !== null) {
+        return matchesURL[1];
+    }
+    // if URI and URL fail, return the original link
+    return link;
+};
+exports.extractId = extractId;

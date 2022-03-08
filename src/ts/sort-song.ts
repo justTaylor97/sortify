@@ -3,11 +3,10 @@ const fs = require("fs");
 const inquirer = require("inquirer");
 const { DateTime } = require("luxon");
 import * as spotify from "./spotify";
-let { ignoredTags, prompts, sievePlaylist } = require("../conf/tags.json");
+let { sievePlaylist, ignoredTags, prompts } = require("../conf/tags.json");
 import logger from "./logger";
 
 // TODO: add comprehensive JSDoc comments
-// TODO: pull out any non-general Spotify API specific functions into sort-track module
 // TODO: clean up all 'any' type declarations
 // TODO: create 'SpotifyPlaylist' type
 // TODO: create 'SpotifyTrack' type
@@ -16,7 +15,12 @@ import logger from "./logger";
 export const addCommand = (program: any) => {
   program
     .command("song")
-    .description("sorts the given playlist")
+    .description("sorts the given playlist.")
+    .option("-s, --sieve <sieve>", "sets the new sieve playlist.")
+    .option(
+      "--tmp-sieve <tmpSieve>",
+      "sets a temporary sieve playlist for the current run."
+    )
     .option(
       "-r, --refresh-playlists",
       "downloads all playlist tag info to playlists.json."
@@ -43,6 +47,14 @@ export const addCommand = (program: any) => {
         // fetch all playlists for caching and tagging
         if (options.refreshPlaylists) {
           await refreshPlaylistTags();
+        }
+
+        if (options.sieve) {
+          options.sieve = spotify.extractId(options.sieve);
+        }
+
+        if (options.tmpSieve) {
+          options.tmpSieve = spotify.extractId(options.tmpSieve);
         }
 
         if (options.sort) {
@@ -387,10 +399,50 @@ export const sort = async (song: any, options: any) => {
       );
     });
     Promise.all(movePromises).then(() => {
-      if (sievePlaylist === "Liked Songs") {
+      let currentSievePlaylist = sievePlaylist;
+
+      // checks for sieve override in the options object
+      if (options.sieve) {
+        // updates local sieve playlist variables
+        currentSievePlaylist = options.sieve;
+        sievePlaylist = options.sieve;
+
+        // updates stored values
+        const newTags = JSON.stringify(
+          {
+            sievePlaylist,
+            prompts,
+            ignoredTags,
+          },
+          null,
+          2
+        );
+        fs.writeFile(
+          `${__dirname}/../conf/tags.json`,
+          newTags,
+          (err: Error) => {
+            if (err) {
+              logger.error(
+                `Error updated current sievePlaylist to ${sievePlaylist}`
+              );
+              logger.error(err);
+            } else {
+              logger.info(`Current sievePlaylist updated to ${sievePlaylist}`);
+            }
+          }
+        );
+      }
+
+      // checks for tmp-sieve override
+      if (options.tmpSieve) {
+        currentSievePlaylist = options.tmpSieve;
+      }
+
+      // removes song from current sieve playlist, if set.
+      if (currentSievePlaylist === "Liked Songs") {
         spotify.unlikeSong(song);
-      } else if (sievePlaylist != undefined) {
-        spotify.removeFromPlaylist(sievePlaylist, song);
+      } else if (currentSievePlaylist != undefined) {
+        spotify.removeFromPlaylist(currentSievePlaylist, song);
       } else {
         logger.verbose("No sieve playlist configured.");
       }

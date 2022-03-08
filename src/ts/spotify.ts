@@ -232,5 +232,29 @@ export const removeFromPlaylist = async (playlistId: any, song: any) => {
         );
         logger.error(err);
       });
+  } else {
+    logger.info(
+      `Track '${song.name}' by ${artistsToString(song.artists)} is not in ${
+        playlist.name
+      }.`
+    );
   }
+};
+
+export const extractId = (link: string) => {
+  // checks for URI formatted spotify links
+  const regexURI = /spotify:[^:]*:(.*)/;
+  let matchesURI = link.match(regexURI);
+  if (matchesURI !== null) {
+    return matchesURI[1];
+  }
+  // checks for URL formatted spotify links
+  const regexURL = /https:\/\/open\.spotify\.com\/playlist\/([^?]*).*/;
+  let matchesURL = link.match(regexURL);
+  if (matchesURL !== null) {
+    return matchesURL[1];
+  }
+
+  // if URI and URL fail, return the original link
+  return link;
 };

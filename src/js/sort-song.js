@@ -64,10 +64,9 @@ var fs = require("fs");
 var inquirer = require("inquirer");
 var DateTime = require("luxon").DateTime;
 var spotify = __importStar(require("./spotify"));
-var _a = require("../conf/tags.json"), ignoredTags = _a.ignoredTags, prompts = _a.prompts, sievePlaylist = _a.sievePlaylist;
+var _a = require("../conf/tags.json"), sievePlaylist = _a.sievePlaylist, ignoredTags = _a.ignoredTags, prompts = _a.prompts;
 var logger_1 = __importDefault(require("./logger"));
 // TODO: add comprehensive JSDoc comments
-// TODO: pull out any non-general Spotify API specific functions into sort-track module
 // TODO: clean up all 'any' type declarations
 // TODO: create 'SpotifyPlaylist' type
 // TODO: create 'SpotifyTrack' type
@@ -75,7 +74,9 @@ var logger_1 = __importDefault(require("./logger"));
 var addCommand = function (program) {
     program
         .command("song")
-        .description("sorts the given playlist")
+        .description("sorts the given playlist.")
+        .option("-s, --sieve <sieve>", "sets the new sieve playlist.")
+        .option("--tmp-sieve <tmpSieve>", "sets a temporary sieve playlist for the current run.")
         .option("-r, --refresh-playlists", "downloads all playlist tag info to playlists.json.")
         .option("-t --suggest-tags", "Suggest playlist tag changes based on the manual playlist selections.")
         .option("--no-sort", "Doesn't sort the currently playing song.")
@@ -101,6 +102,12 @@ var addCommand = function (program) {
                     _a.sent();
                     _a.label = 4;
                 case 4:
+                    if (options.sieve) {
+                        options.sieve = spotify.extractId(options.sieve);
+                    }
+                    if (options.tmpSieve) {
+                        options.tmpSieve = spotify.extractId(options.tmpSieve);
+                    }
                     if (!options.sort) return [3 /*break*/, 6];
                     return [4 /*yield*/, exports.sort(current.item, options)];
                 case 5:
@@ -460,11 +467,38 @@ var sort = function (song, options) { return __awaiter(void 0, void 0, void 0, f
                         }));
                     });
                     Promise.all(movePromises_1).then(function () {
-                        if (sievePlaylist === "Liked Songs") {
+                        var currentSievePlaylist = sievePlaylist;
+                        // checks for sieve override in the options object
+                        if (options.sieve) {
+                            // updates local sieve playlist variables
+                            currentSievePlaylist = options.sieve;
+                            sievePlaylist = options.sieve;
+                            // updates stored values
+                            var newTags = JSON.stringify({
+                                sievePlaylist: sievePlaylist,
+                                prompts: prompts,
+                                ignoredTags: ignoredTags,
+                            }, null, 2);
+                            fs.writeFile(__dirname + "/../conf/tags.json", newTags, function (err) {
+                                if (err) {
+                                    logger_1.default.error("Error updated current sievePlaylist to " + sievePlaylist);
+                                    logger_1.default.error(err);
+                                }
+                                else {
+                                    logger_1.default.info("Current sievePlaylist updated to " + sievePlaylist);
+                                }
+                            });
+                        }
+                        // checks for tmp-sieve override
+                        if (options.tmpSieve) {
+                            currentSievePlaylist = options.tmpSieve;
+                        }
+                        // removes song from current sieve playlist, if set.
+                        if (currentSievePlaylist === "Liked Songs") {
                             spotify.unlikeSong(song);
                         }
-                        else if (sievePlaylist != undefined) {
-                            spotify.removeFromPlaylist(sievePlaylist, song);
+                        else if (currentSievePlaylist != undefined) {
+                            spotify.removeFromPlaylist(currentSievePlaylist, song);
                         }
                         else {
                             logger_1.default.verbose("No sieve playlist configured.");
