@@ -23,6 +23,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+var setup_1 = require("./setup");
+setup_1.checkConfs();
 var commander_1 = require("commander");
 var sortSong = __importStar(require("./sort-song"));
 var sortPlaylist = __importStar(require("./sort-playlist"));

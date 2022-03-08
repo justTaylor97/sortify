@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { checkConfs } from "./setup";
+checkConfs();
 import { program } from "commander";
 import * as sortSong from "./sort-song";
 import * as sortPlaylist from "./sort-playlist";
