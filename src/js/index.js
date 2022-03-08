@@ -29,18 +29,16 @@ var commander_1 = require("commander");
 var sortSong = __importStar(require("./sort-song"));
 var sortPlaylist = __importStar(require("./sort-playlist"));
 var logger_1 = __importDefault(require("./logger"));
-// TODO: do auth
 commander_1.program
     .option("-v, --verbose", "Displays more information.") // TODO: implement these
     .option("-l, --level <level>", "The npm logging level to be displayed.");
 // Adds subcommands from modules
 sortPlaylist.addCommand(commander_1.program);
 sortSong.addCommand(commander_1.program);
-// TODO: misc tags
-// TODO: add sieve origin playlist selection as command line option
+// TODO: misc tags - create a additional prompt/section for uncategorized tags
 // TODO: add verbose logging to display playlist overlaps?
 // TODO: add interface for tag category editing.
-// TODO: keep persistant logs of sorted songs?
+// TODO: keep persistant logs of sorted songs? - use a second logger to record all playlist adds and subtracts?
 // TODO: make fresh install setup easy for new users
 commander_1.program.parse(process.argv);
 var options = commander_1.program.opts();

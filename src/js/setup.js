@@ -42,6 +42,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkConfs = void 0;
 var fs = require("fs");
 var logger_1 = __importDefault(require("./logger"));
+// TODO: select a sieve playlist, defaults to liked songs.
 var checkNodeVersion = function () {
     var semVerRegEx = /(\d*)\.(\d*)\.(\d*)/;
     var match = process.version.match(semVerRegEx);

@@ -1,6 +1,7 @@
 const fs = require("fs");
 import logger from "./logger";
 
+// TODO: select a sieve playlist, defaults to liked songs.
 const checkNodeVersion = () => {
   const semVerRegEx = /(\d*)\.(\d*)\.(\d*)/;
   let match = process.version.match(semVerRegEx);
