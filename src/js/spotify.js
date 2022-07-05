@@ -46,6 +46,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -144,9 +149,41 @@ exports.getCurrentPlayback = getCurrentPlayback;
  */
 var getPlaylist = function (playlistId, opts) {
     if (opts === void 0) { opts = {}; }
-    return spotify.get("playlists/" + playlistId, {
-        params: opts,
-        headers: { Authorization: "Bearer " + access_token },
+    return __awaiter(void 0, void 0, void 0, function () {
+        var response, totalSongs, currentSongs, trackFields, offsetResponse, newTracks;
+        var _a, _b, _c;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
+                case 0: return [4 /*yield*/, spotify.get("playlists/" + playlistId, {
+                        params: opts,
+                        headers: { Authorization: "Bearer " + access_token },
+                    })];
+                case 1:
+                    response = _d.sent();
+                    totalSongs = response.data.tracks.total;
+                    currentSongs = response.data.tracks.items.length;
+                    trackFields = (_b = (_a = opts) === null || _a === void 0 ? void 0 : _a.fields) !== null && _b !== void 0 ? _b : "";
+                    trackFields = (_c = trackFields.match(/tracks\((.*)\)/)) !== null && _c !== void 0 ? _c : [, ""];
+                    trackFields = trackFields[1];
+                    _d.label = 2;
+                case 2:
+                    if (!(currentSongs < totalSongs)) return [3 /*break*/, 4];
+                    return [4 /*yield*/, spotify.get("playlists/" + playlistId + "/tracks", {
+                            params: __assign(__assign({}, opts), { fields: trackFields, offset: currentSongs }),
+                            headers: { Authorization: "Bearer " + access_token },
+                        })];
+                case 3:
+                    offsetResponse = _d.sent();
+                    newTracks = offsetResponse.data.items;
+                    response.data.tracks.items = __spreadArray(__spreadArray([], response.data.tracks.items), newTracks);
+                    // update currentSongs for eventual loop termination
+                    currentSongs = response.data.tracks.items.length;
+                    // update total song number to prevent potential race condition
+                    totalSongs = offsetResponse.data.total;
+                    return [3 /*break*/, 2];
+                case 4: return [2 /*return*/, response];
+            }
+        });
     });
 };
 exports.getPlaylist = getPlaylist;
@@ -155,11 +192,43 @@ exports.getPlaylist = getPlaylist;
  * @param {*} playlistId
  * @returns
  */
-var overwritePlaylist = function (playlistId, uris) {
-    return spotify.put("playlists/" + playlistId + "/tracks", { uris: uris }, {
-        headers: { Authorization: "Bearer " + access_token },
+var overwritePlaylist = function (playlistId, uris) { return __awaiter(void 0, void 0, void 0, function () {
+    var snapshots, chunkSize, i, chunk, deleteSongs, chunkData;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                snapshots = [];
+                chunkSize = 100;
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < uris.length)) return [3 /*break*/, 5];
+                chunk = uris.slice(i, i + chunkSize);
+                deleteSongs = chunk.map(function (uri) {
+                    return { uri: uri };
+                });
+                return [4 /*yield*/, spotify.delete("playlists/" + playlistId + "/tracks", {
+                        data: {
+                            tracks: deleteSongs,
+                        },
+                        headers: { Authorization: "Bearer " + access_token },
+                    })];
+            case 2:
+                _a.sent();
+                return [4 /*yield*/, spotify.post("playlists/" + playlistId + "/tracks", { uris: chunk }, {
+                        headers: { Authorization: "Bearer " + access_token },
+                    })];
+            case 3:
+                chunkData = (_a.sent()).data;
+                snapshots.push(chunkData.snapshot_id);
+                _a.label = 4;
+            case 4:
+                i += chunkSize;
+                return [3 /*break*/, 1];
+            case 5: return [2 /*return*/, snapshots];
+        }
     });
-};
+}); };
 exports.overwritePlaylist = overwritePlaylist;
 /**
  * Get information about the user’s current playback state, including track or episode, progress, and active device.

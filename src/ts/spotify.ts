@@ -71,11 +71,44 @@ export const getCurrentPlayback = () => {
  * @param {*} playlistId
  * @returns
  */
-export const getPlaylist = (playlistId: string, opts = {}) => {
-  return spotify.get(`playlists/${playlistId}`, {
+export const getPlaylist = async (playlistId: string, opts = {}) => {
+  let response = await spotify.get(`playlists/${playlistId}`, {
     params: opts,
     headers: { Authorization: `Bearer ${access_token}` },
   });
+
+  // get number of songs fetched vs needed
+  let totalSongs = response.data.tracks.total;
+  let currentSongs = response.data.tracks.items.length;
+
+  // sets fields for nested track queries
+  let trackFields = (opts as any)?.fields ?? "";
+  trackFields = trackFields.match(/tracks\((.*)\)/) ?? [, ""];
+  trackFields = trackFields[1];
+
+  // gets tracks with offset until the entire playlist has been fetched
+  while (currentSongs < totalSongs) {
+    let offsetResponse = await spotify.get(`playlists/${playlistId}/tracks`, {
+      params: {
+        ...opts,
+        fields: trackFields,
+        offset: currentSongs,
+      },
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    // add new tracks from offset playlist query
+    let newTracks = offsetResponse.data.items;
+    response.data.tracks.items = [...response.data.tracks.items, ...newTracks];
+
+    // update currentSongs for eventual loop termination
+    currentSongs = response.data.tracks.items.length;
+
+    // update total song number to prevent potential race condition
+    totalSongs = offsetResponse.data.total;
+  }
+
+  return response;
 };
 
 /**
@@ -83,14 +116,37 @@ export const getPlaylist = (playlistId: string, opts = {}) => {
  * @param {*} playlistId
  * @returns
  */
-export const overwritePlaylist = (playlistId: string, uris: string[]) => {
-  return spotify.put(
-    `playlists/${playlistId}/tracks`,
-    { uris },
-    {
+export const overwritePlaylist = async (playlistId: string, uris: string[]) => {
+  let snapshots = [];
+  const chunkSize = 100;
+
+  for (let i = 0; i < uris.length; i += chunkSize) {
+    const chunk = uris.slice(i, i + chunkSize);
+
+    // deletes old track locations
+    let deleteSongs = chunk.map((uri) => {
+      return { uri };
+    });
+
+    await spotify.delete(`playlists/${playlistId}/tracks`, {
+      data: {
+        tracks: deleteSongs,
+      },
       headers: { Authorization: `Bearer ${access_token}` },
-    }
-  );
+    });
+
+    // inserts new track locations
+    let { data: chunkData } = await spotify.post(
+      `playlists/${playlistId}/tracks`,
+      { uris: chunk },
+      {
+        headers: { Authorization: `Bearer ${access_token}` },
+      }
+    );
+    snapshots.push(chunkData.snapshot_id);
+  }
+
+  return snapshots;
 };
 
 /**

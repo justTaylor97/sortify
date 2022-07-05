@@ -72,6 +72,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.modulateTrack = exports.trackDistance = exports.addCommand = void 0;
 var spotify = __importStar(require("./spotify"));
 var fs_1 = __importDefault(require("fs"));
+var logger_1 = __importDefault(require("./logger"));
 var dice = require("@amnesic0blex/dice");
 var addCommand = function (program) {
     program
@@ -160,11 +161,11 @@ var modulateTrack = function (track, field, direction) {
 exports.modulateTrack = modulateTrack;
 // TODO: add function to return/log vital stats
 var sort = function (playlistId) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, playlistTracks, ids, audio_features, detailedTracks, i, orderedPlaylist, anchorTrack, closestTrack, i, currentTrackDistance, nextTrack, csvWriter, uris;
+    var data, playlistTracks, ids, audio_features, chunkSize, i, chunk, chunkData, detailedTracks, i, orderedPlaylist, anchorTrack, closestTrack, i, currentTrackDistance, nextTrack, csvWriter, uris;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, spotify.getPlaylist(playlistId, {
-                    fields: "tracks.items(track(id, uri, name, popularity, explicit, duration_ms, artists(name,id)))",
+                    fields: "tracks(total, offset, limit, items(track(id, uri, name, popularity, explicit, duration_ms, artists(name,id))))",
                 })];
             case 1:
                 data = (_a.sent()).data;
@@ -175,9 +176,22 @@ var sort = function (playlistId) { return __awaiter(void 0, void 0, void 0, func
                 ids = playlistTracks.map(function (currentTrack) {
                     return currentTrack.id;
                 });
-                return [4 /*yield*/, spotify.getTrackAudioFeatures(ids)];
+                audio_features = [];
+                chunkSize = 100;
+                i = 0;
+                _a.label = 2;
             case 2:
-                audio_features = (_a.sent()).data.audio_features;
+                if (!(i < ids.length)) return [3 /*break*/, 5];
+                chunk = ids.slice(i, i + chunkSize);
+                return [4 /*yield*/, spotify.getTrackAudioFeatures(chunk)];
+            case 3:
+                chunkData = (_a.sent()).data;
+                audio_features = audio_features.concat(chunkData.audio_features);
+                _a.label = 4;
+            case 4:
+                i += chunkSize;
+                return [3 /*break*/, 2];
+            case 5:
                 detailedTracks = [];
                 for (i = 0; i < playlistTracks.length; ++i) {
                     // scale certain fields for better manipulation
@@ -206,7 +220,9 @@ var sort = function (playlistId) { return __awaiter(void 0, void 0, void 0, func
                     }
                     nextTrack = detailedTracks.splice(closestTrack.trackIndex, 1);
                     orderedPlaylist = orderedPlaylist.concat(nextTrack);
-                    console.log(anchorTrack.name + " is closest to " + nextTrack[0].name + " with a distance of " + closestTrack.distance + " and BPM " + nextTrack[0].tempo);
+                    logger_1.default.info(anchorTrack.name + " is closest to " + nextTrack[0].name);
+                    logger_1.default.verbose("Distance: " + closestTrack.distance);
+                    logger_1.default.verbose("BPM: " + nextTrack[0].tempo);
                 }
                 csvWriter = fs_1.default.createWriteStream("./output.csv");
                 csvWriter.write("NAME|Danceability|Energy|Popularity|Valence|Tempo\n");
@@ -216,7 +232,10 @@ var sort = function (playlistId) { return __awaiter(void 0, void 0, void 0, func
                 uris = orderedPlaylist.map(function (track) {
                     return track.uri;
                 });
-                spotify.overwritePlaylist(playlistId, uris);
+                return [4 /*yield*/, spotify.overwritePlaylist(playlistId, uris)];
+            case 6:
+                _a.sent();
+                logger_1.default.info("Playlist updated!");
                 return [2 /*return*/];
         }
     });

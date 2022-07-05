@@ -1,5 +1,6 @@
 import * as spotify from "./spotify";
 import fs from "fs";
+import logger from "./logger";
 const dice = require("@amnesic0blex/dice");
 
 type TrackAudioFeatures = {
@@ -9,6 +10,7 @@ type TrackAudioFeatures = {
   popularity: number;
   valence: number;
   tempo: number;
+  key: number;
 };
 
 export const addCommand = (program: any) => {
@@ -101,12 +103,12 @@ export const modulateTrack = (
 // TODO: add function to return/log vital stats
 
 const sort = async (playlistId: string) => {
-  // TODO: handle playlists longer than 100 songs with a loop or recursive function call?
+  // TODO: handle regex for playlistId
 
   // fetches the playlist tracks and filters out irrelevant fields
   let { data } = await spotify.getPlaylist(playlistId, {
     fields:
-      "tracks.items(track(id, uri, name, popularity, explicit, duration_ms, artists(name,id)))",
+      "tracks(total, offset, limit, items(track(id, uri, name, popularity, explicit, duration_ms, artists(name,id))))",
   });
   let playlistTracks = data.tracks.items;
   playlistTracks = playlistTracks.map((currentTrack: any) => {
@@ -117,9 +119,15 @@ const sort = async (playlistId: string) => {
   let ids = playlistTracks.map((currentTrack: any) => {
     return currentTrack.id;
   });
-  let {
-    data: { audio_features },
-  } = await spotify.getTrackAudioFeatures(ids);
+
+  // splits tracks into chunks of 100 or less for API limits
+  let audio_features: any[] = [];
+  const chunkSize = 100;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    let { data: chunkData } = await spotify.getTrackAudioFeatures(chunk);
+    audio_features = audio_features.concat(chunkData.audio_features);
+  }
 
   // merges the data from the tracks and the audio features into a detailed track array
   let detailedTracks = [];
@@ -154,9 +162,9 @@ const sort = async (playlistId: string) => {
     }
     let nextTrack: any = detailedTracks.splice(closestTrack.trackIndex, 1);
     orderedPlaylist = orderedPlaylist.concat(nextTrack);
-    console.log(
-      `${anchorTrack.name} is closest to ${nextTrack[0].name} with a distance of ${closestTrack.distance} and BPM ${nextTrack[0].tempo}`
-    );
+    logger.info(`${anchorTrack.name} is closest to ${nextTrack[0].name}`);
+    logger.verbose(`Distance: ${closestTrack.distance}`);
+    logger.verbose(`BPM: ${nextTrack[0].tempo}`);
   }
 
   // TODO: write this to a csv for visual analysis?
@@ -174,7 +182,8 @@ const sort = async (playlistId: string) => {
   let uris = orderedPlaylist.map((track) => {
     return track.uri;
   });
-  spotify.overwritePlaylist(playlistId, uris);
+  await spotify.overwritePlaylist(playlistId, uris);
+  logger.info("Playlist updated!");
 
   // TODO: increase
 };
