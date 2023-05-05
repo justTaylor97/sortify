@@ -160,13 +160,23 @@ var modulateTrack = function (track, field, direction) {
 };
 exports.modulateTrack = modulateTrack;
 // TODO: add function to return/log vital stats
-var sort = function (playlistId) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, playlistTracks, ids, audio_features, chunkSize, i, chunk, chunkData, detailedTracks, i, orderedPlaylist, anchorTrack, closestTrack, i, currentTrackDistance, nextTrack, csvWriter, uris;
+var getPlaylistId = function (playlistIdOrUri) {
+    var _a, _b;
+    var spotifyUriRegex = /spotify:playlist:(.*)/;
+    return spotifyUriRegex.test(playlistIdOrUri)
+        ? (_b = (_a = playlistIdOrUri.match(spotifyUriRegex)) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : playlistIdOrUri
+        : playlistIdOrUri;
+};
+var sort = function (playlistIdOrUri) { return __awaiter(void 0, void 0, void 0, function () {
+    var playlistId, data, playlistTracks, ids, audio_features, chunkSize, i, chunk, chunkData, detailedTracks, i, orderedPlaylist, anchorTrack, closestTrack, i, currentTrackDistance, nextTrack, csvWriter, uris;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, spotify.getPlaylist(playlistId, {
-                    fields: "tracks(total, offset, limit, items(track(id, uri, name, popularity, explicit, duration_ms, artists(name,id))))",
-                })];
+            case 0:
+                playlistId = getPlaylistId(playlistIdOrUri);
+                logger_1.default.debug("Sorting spotify:playlist:" + playlistId);
+                return [4 /*yield*/, spotify.getPlaylist(playlistId, {
+                        fields: "tracks(total, offset, limit, items(track(id, uri, name, popularity, explicit, duration_ms, artists(name,id))))",
+                    })];
             case 1:
                 data = (_a.sent()).data;
                 playlistTracks = data.tracks.items;

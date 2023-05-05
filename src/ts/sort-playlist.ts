@@ -102,8 +102,16 @@ export const modulateTrack = (
 
 // TODO: add function to return/log vital stats
 
-const sort = async (playlistId: string) => {
-  // TODO: handle regex for playlistId
+const getPlaylistId = (playlistIdOrUri: string) => {
+  const spotifyUriRegex = /spotify:playlist:(.*)/;
+  return spotifyUriRegex.test(playlistIdOrUri)
+    ? playlistIdOrUri.match(spotifyUriRegex)?.[1] ?? playlistIdOrUri
+    : playlistIdOrUri;
+};
+
+const sort = async (playlistIdOrUri: string) => {
+  const playlistId: string = getPlaylistId(playlistIdOrUri);
+  logger.debug(`Sorting spotify:playlist:${playlistId}`);
 
   // fetches the playlist tracks and filters out irrelevant fields
   let { data } = await spotify.getPlaylist(playlistId, {
